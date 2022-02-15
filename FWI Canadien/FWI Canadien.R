@@ -1,20 +1,29 @@
 library(readr)
 library(firebehavioR)
 library(cffdrs)
-
 library(ReIns)
 
-RR_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/RR_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
-RR_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/RR_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
-T_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/T_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
-T_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/T_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
-U_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/U_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
-U_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/U_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
-VT_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/VT_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
-VT_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/VT_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# RR_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/RR_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# RR_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/RR_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# T_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/T_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# T_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/T_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# U_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/U_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# U_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/U_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# VT_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/VT_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# VT_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/VT_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+RR_91_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_81-99.csv",delim = ";", escape_double = FALSE, trim_ws = TRUE)
+RR_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+T_91_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_T_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+T_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_T_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+U_91_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_U_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+U_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_U_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+VT_91_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_VT_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+VT_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_VT_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+Incendie_91_2021 <<- read_delim("data/liste_incendies_91_2021.csv", delim=";", escape_double = FALSE, trim_ws = TRUE)
 
 # fwi <- function(input, init = data.frame(ffmc = 85, dmc = 6, dc = 15, lat = 55), batch = TRUE, out = "all", lat.adjust = TRUE, uppercase = TRUE)
-# données nécessaires : température (celsius, notre T), humidité relative (en % notre U, vitesse du vent (km/h, notre V/VT), précipitations (en mm, notre RR)
+# donnees necessaires : temperature (celsius, notre T), humidite relative (en % notre U, vitesse du vent (km/h, notre V/VT), précipitations (en mm, notre RR)
 
 test <- RR_91_99[RR_91_99$HEURE == 12,]
 test2 <- T_91_99[T_91_99$HEURE == 12,]
