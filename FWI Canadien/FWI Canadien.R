@@ -1,0 +1,32 @@
+library(readr)
+library(firebehavioR)
+library(cffdrs)
+
+library(ReIns)
+
+RR_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/RR_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+RR_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/RR_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+T_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/T_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+T_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/T_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+U_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/U_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+U_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/U_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+VT_91_99 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/VT_91-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+VT_2000_2021 <- read_delim("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/projet/données lisibles/VT_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+# fwi <- function(input, init = data.frame(ffmc = 85, dmc = 6, dc = 15, lat = 55), batch = TRUE, out = "all", lat.adjust = TRUE, uppercase = TRUE)
+# données nécessaires : température (celsius, notre T), humidité relative (en % notre U, vitesse du vent (km/h, notre V/VT), précipitations (en mm, notre RR)
+
+test <- RR_91_99[RR_91_99$HEURE == 12,]
+test2 <- T_91_99[T_91_99$HEURE == 12,]
+RR_12h <- rbind(RR_91_99[RR_91_99$HEURE == 12,],RR_2000_2021[RR_2000_2021$HEURE == 12,])
+T_12h <- rbind(T_91_99[T_91_99$HEURE == 12,],T_2000_2021[T_2000_2021$HEURE == 12,])
+U_12h <- rbind(U_91_99[U_91_99$HEURE == 12,],U_2000_2021[U_2000_2021$HEURE == 12,])
+VT_12h <- rbind(VT_91_99[VT_91_99$HEURE == 12,],VT_2000_2021[VT_2000_2021$HEURE == 12,])
+# View(fwi(T_81_99))
+# help(fwi)
+names(RR_12h)[6] <- "prec"
+names(T_12h)[6] <- "temp"
+names(U_12h)[6] <- "rh"
+names(VT_12h)[6] <- "ws"
+donnee_12h <- merge(merge(merge(RR_12h, T_12h), U_12h), VT_12h)
+fwi_res = fwi(input = na.omit(donnee_12h))
