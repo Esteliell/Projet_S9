@@ -28,7 +28,7 @@ names(T_12h)[6] <- "temp"
 names(U_12h)[6] <- "rh"
 names(VT_12h)[6] <- "ws"
 donnee_12h <- merge(merge(merge(RR_12h, T_12h), U_12h), VT_12h)
-fwi_index = fwi(input = na.omit(donnee_12h))
+fwi_resultat = fwi(input = na.omit(donnee_12h))
 
 
 # Partie copier coller
@@ -40,5 +40,5 @@ ggplot(data = fwi_index, mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y
   geom_point() +
   scale_color_gradient(guide="none", low="red", high="green") +
   labs(x = "Date", y = "Angstrom Index") +
-  geom_point(data = graph_summer_angstrom_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+  geom_point(data = fwi_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
              pch=16, size=2, colour="black")
