@@ -3,6 +3,7 @@ library(firebehavioR)
 library(cffdrs)
 library(ReIns)
 library(ggplot2)
+setwd("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/Projet_S9")
 
 RR_91_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_81-99.csv",delim = ";", escape_double = FALSE, trim_ws = TRUE)
 RR_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
@@ -33,12 +34,12 @@ fwi_resultat = fwi(input = na.omit(donnee_12h))
 
 # Partie copier coller
 
-date_debut <- as.Date("01/06/2000","%d/%m/%Y")
-date_fin <- as.Date("22/12/2020","%d/%m/%Y")
+#date_debut <- as.Date("01/06/2000","%d/%m/%Y")
+#date_fin <- as.Date("22/12/2020","%d/%m/%Y")
 
-ggplot(data = fwi_index, mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = ANGSTROM_INDEX, color = ANGSTROM_INDEX, xmin = date_debut,xmax=date_fin)) +
-  geom_point() +
-  scale_color_gradient(guide="none", low="red", high="green") +
-  labs(x = "Date", y = "Angstrom Index") +
-  geom_point(data = fwi_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
-             pch=16, size=2, colour="black")
+#ggplot(data = fwi_index, mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = ANGSTROM_INDEX, color = ANGSTROM_INDEX, xmin = date_debut,xmax=date_fin)) +
+#  geom_point() +
+#  scale_color_gradient(guide="none", low="red", high="green") +
+#  labs(x = "Date", y = "Angstrom Index") +
+#  geom_point(data = fwi_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+#             pch=16, size=2, colour="black")
