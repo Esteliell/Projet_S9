@@ -3,7 +3,8 @@ library(firebehavioR)
 library(cffdrs)
 library(ReIns)
 library(ggplot2)
-setwd("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/Projet_S9")
+# library(dplyr)
+setwd("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/Projet_S9/")
 
 RR_91_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_81-99.csv",delim = ";", escape_double = FALSE, trim_ws = TRUE)
 RR_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
@@ -31,11 +32,26 @@ names(VT_12h)[6] <- "ws"
 donnee_12h <- merge(merge(merge(RR_12h, T_12h), U_12h), VT_12h)
 fwi_resultat = fwi(input = na.omit(donnee_12h))
 
+# ces 3 lignes sont inutiles tant qu'on n'arrive pas à utiliser ggplot ...
 
-# Partie copier coller
+Nb_rows <- 10968
+fwi_plot <<- data.frame(matrix(ncol=2,nrow=Nb_rows,))
+colnames(fwi_plot) <- c("DATE", "FWI_INDEX")
 
-#date_debut <- as.Date("01/06/2000","%d/%m/%Y")
-#date_fin <- as.Date("22/12/2020","%d/%m/%Y")
+# les parties avec # ne fonctionne pas ;( 
+
+#for(i in 1:Nb_rows)
+#{
+#  ligne_test <- fwi_resultat[i,]
+#  
+#  index <- i
+  
+#  fwi_plot[i,] <<- c(as.Date(gsub(" ", "", paste(ligne_test$JOUR,"/",ligne_test$MOIS,"/",ligne_test$AN)),format="%d/%m/%Y", origin="1970-01-01"), index)
+  
+#}
+
+date_debut <- as.Date("01/06/2000","%d/%m/%Y")
+date_fin <- as.Date("22/12/2020","%d/%m/%Y")
 
 #ggplot(data = fwi_index, mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = ANGSTROM_INDEX, color = ANGSTROM_INDEX, xmin = date_debut,xmax=date_fin)) +
 #  geom_point() +
@@ -43,3 +59,5 @@ fwi_resultat = fwi(input = na.omit(donnee_12h))
 #  labs(x = "Date", y = "Angstrom Index") +
 #  geom_point(data = fwi_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
 #             pch=16, size=2, colour="black")
+
+plot(fwi_resultat$FWI, main="fwi canadien",color = "green")
