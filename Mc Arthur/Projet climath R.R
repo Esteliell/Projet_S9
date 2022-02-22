@@ -58,8 +58,10 @@ for (i in 1:nrow(RR_15h)){
   u <- U_15h[i,]$U
   vt <- VT_15h[i,]$VT
   
-  McArthur_Data[nrow(McArthur_Data)+1,] <<- c(as.Date(gsub(" ", "", paste(ref_date$JOUR,"/",ref_date$MOIS,"/",ref_date$AN)), format="%d/%m/%Y", origin="1970-01-01"),t,rr,u,vt)
+  McArthur_Data[nrow(McArthur_Data)+1,] <<- data.frame(gsub(" ", "", paste(ref_date$JOUR,"/",ref_date$MOIS,"/",ref_date$AN)), format="%d/%m/%Y", origin="1970-01-01")
 }
+
+##McArthur_Data[nrow(McArthur_Data)+1,] <<- c(as.Date(gsub(" ", "", paste(ref_date$JOUR,"/",ref_date$MOIS,"/",ref_date$AN)), format="%d/%m/%Y", origin="1970-01-01"),t,rr,u,vt)
 
 tableau <- cbind(data.frame(T_15h),
                  data.frame(U_15h),
