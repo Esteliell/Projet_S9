@@ -22,8 +22,8 @@ initialisation <- function() {
   T_13h <- rbind(T_81_99[T_81_99$HEURE == 13,],T_2000_2021[T_2000_2021$HEURE == 13,])
   U_13h <- rbind(U_81_99[U_81_99$HEURE == 13,],U_2000_2021[U_2000_2021$HEURE == 13,])
   
-  Angstrom_Index <<- data.frame(matrix(ncol=2,nrow=10968))
-  colnames(Angstrom_Index) <<- c("DATE", "ANGSTROM_INDEX")
+  Angstrom_Index <<- data.frame(matrix(ncol=5,nrow=10968))
+  colnames(Angstrom_Index) <<- c("DATE", "AN", "MOIS", "JOUR","ANGSTROM_INDEX")
   
   for(i in 1:10968)
   {
@@ -32,7 +32,8 @@ initialisation <- function() {
     
     index <- (ligne_humidite$U / 20) + (27 - ligne_temperature$T)/10
     
-    Angstrom_Index[i,] <<- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"), index)
+    Angstrom_Index[i,] <<- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"),ligne_humidite$AN,
+                             ligne_humidite$MOIS, ligne_humidite$JOUR, index)
     
   }
   

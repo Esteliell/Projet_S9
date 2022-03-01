@@ -1,16 +1,26 @@
-Angstrom <- na.omit(Angstrom_Index$ANGSTROM_INDEX)
-fwi <- na.omit(fwi_resultat$FWI)
+library(dplyr)
 
 
-#pour adapter la longueur : boucle sur la date pour créer un simili-bind et enlever les différents NA pour avoir la même length
-# et pouvoir utiliser les méthodes d'analyse entre séries
+test <- inner_join(na.omit(Angstrom_Index),na.omit(fwi_resultat),by=c("AN","MOIS", "JOUR"))
+test <- select(test, "DATE", "AN", "MOIS", "JOUR", "ANGSTROM_INDEX", "FWI")
 
-cor(Angstrom_Index$ANGSTROM_INDEX, fwi_resultat$FWI, method = c("pearson", "kendall", "spearman"))
+test2 <- test
+test2$ANGSTROM_INDEX <- test2$ANGSTROM_INDEX *-1
+min_test <- min(test2$ANGSTROM_INDEX)
+test2$ANGSTROM_INDEX <- test2$ANGSTROM_INDEX - min_test +1
+
+cor(test2$ANGSTROM_INDEX, test2$FWI, method = "spearman")
 #pearson et spearman. Pearson = cor classique (sensible à series très extrêmes /aberrantes), spearman + robuste la-dessus
 
-u1 = quantile(Angstrom, 0.95)
-u2 = quantile(fwi, 0.95)
-xi.est.95 = sum(Angstrom > u1 & fwi > u2)/sum(Angstrom > u1)
+tail_correlation <- function(quant){
+  u1 = quantile(test2$ANGSTROM_INDEX, quant)
+  u2 = quantile(test2$FWI, quant)
+  xi.est.quantile = sum(test2$ANGSTROM_INDEX > u1 & test2$FWI > u2)/sum(test2$ANGSTROM_INDEX > u1)
+  
+  xi.est.quantile
+}
+
+tail_correlation(0.95)
 #faire lanalyse pour différents nvx quantiles : 95%, voir 98% / 99% 
 # !! angstrom valeurs faibles, on prend 5% et on regarde le < mais plus simple : on prend -angstrom comme auto-correl
 

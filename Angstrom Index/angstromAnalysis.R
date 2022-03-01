@@ -34,3 +34,6 @@ tmp = atdf(as.ts(moment_summer$ANGSTROM_INDEX), u = prob, plot = FALSE, lag.max 
 par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
 plot(tmp, main = "", xlab = "h", ylab = expression(chi(u,h)))
 lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+#### ANALYSE INDICES D'ENTREES ####
+
