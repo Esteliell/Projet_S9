@@ -37,3 +37,25 @@ lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
 
 #### ANALYSE INDICES D'ENTREES ####
 
+library(dplyr)
+
+join_index_temperature <- inner_join(na.omit(Angstrom_Index),na.omit(T_13h),by=c("AN","MOIS", "JOUR"))
+join_index_temperature <- inner_join(join_index_temperature, na.omit(U_13h),by=c("AN","MOIS", "JOUR"))
+join_index_temperature <- select(test, "DATE", "AN", "MOIS", "JOUR", "ANGSTROM_INDEX", "T","U")
+
+join_index_temperature2 <- join_index_temperature
+join_index_temperature2$ANGSTROM_INDEX <- join_index_temperature2$ANGSTROM_INDEX *-1
+min_join_index_temperature2 <- min(join_index_temperature2$ANGSTROM_INDEX)
+join_index_temperature2$ANGSTROM_INDEX <- join_index_temperature2$ANGSTROM_INDEX - min_join_index_temperature2 +1
+
+extremal_correlation_input_output <- function(input, quant){
+  u1 = quantile(join_index_temperature2$ANGSTROM_INDEX, quant, na.rm = TRUE)
+  u2 = quantile(input, quant, na.rm = TRUE)
+  xi.est.quantile = sum(join_index_temperature2$ANGSTROM_INDEX > u1 & input > u2)/sum(join_index_temperature2$ANGSTROM_INDEX > u1)
+  
+  xi.est.quantile
+}
+
+quant = 0.95
+extremal_correlation_input_output(join_index_temperature2$T,quant)
+extremal_correlation_input_output(join_index_temperature2$U,quant)

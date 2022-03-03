@@ -19,11 +19,11 @@ initialisation <- function() {
   #Type de feu : Forêt, A partir du : 01/10/1991, jusqu'au : 10/10/2021, D?partement : BOUCHES-DU-RHONE (13), Commune / code INSEE : 13
   
   ##Température et humidité ? 13h
-  T_13h <- rbind(T_81_99[T_81_99$HEURE == 13,],T_2000_2021[T_2000_2021$HEURE == 13,])
-  U_13h <- rbind(U_81_99[U_81_99$HEURE == 13,],U_2000_2021[U_2000_2021$HEURE == 13,])
+  T_13h <<- rbind(T_81_99[T_81_99$HEURE == 13,],T_2000_2021[T_2000_2021$HEURE == 13,])
+  U_13h <<- rbind(U_81_99[U_81_99$HEURE == 13,],U_2000_2021[U_2000_2021$HEURE == 13,])
   
-  Angstrom_Index <<- data.frame(matrix(ncol=5,nrow=10968))
-  colnames(Angstrom_Index) <<- c("DATE", "AN", "MOIS", "JOUR","ANGSTROM_INDEX")
+  Angstrom_Index <<- data.frame(matrix(ncol=7,nrow=10968))
+  colnames(Angstrom_Index) <<- c("DATE", "AN", "MOIS", "JOUR","ANGSTROM_INDEX", "U", "T")
   
   for(i in 1:10968)
   {
@@ -33,13 +33,13 @@ initialisation <- function() {
     index <- (ligne_humidite$U / 20) + (27 - ligne_temperature$T)/10
     
     Angstrom_Index[i,] <<- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"),ligne_humidite$AN,
-                             ligne_humidite$MOIS, ligne_humidite$JOUR, index)
+                             ligne_humidite$MOIS, ligne_humidite$JOUR, index, ligne_humidite$U, ligne_temperature$T)
     
   }
   
 
   nb_iteration = nrow(Angstrom_Index)
-  Index_Summer <<- data.frame(DATE=numeric(), ANGSTROM_INDEX=numeric(), stringsAsFactors=FALSE)
+  Index_Summer <<- data.frame(DATE=numeric(), AN=numeric(), MOIS=numeric(), JOUR=numeric(),ANGSTROM_INDEX=numeric(), U = numeric(), T=numeric(), stringsAsFactors=FALSE)
   
   for (i in 1:nb_iteration){
     month <- month(as.Date(Angstrom_Index[i,]$DATE, origin="1970-01-01"))
