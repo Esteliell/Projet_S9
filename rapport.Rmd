@@ -1,0 +1,85 @@
+---
+title: "Projet S9"
+author: "Adrien Faissat, Guillaume Schmit, Omar Himych, Morgane Roy"
+date: "03/03/2022"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    number_sections: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introdution
+
+## Intérêt général des indices
+## Types d'indices
+
+# Indices étudiés  {.tabset}
+
+## Fosberg Fire Weather Index (FFWI)
+
+## FWI Canadien
+
+## Angstrom Index
+
+## MacArthur Grassland Mark 5 Index
+
+# Discussion comparative des formules
+
+## Variables d'entrée
+
+## Statique vs Dynamique
+
+## Échelles temporelles
+
+# Implémentation des calculs {.tabset}
+
+## Fosberg Fire Weather Index (FFWI)
+
+## FWI Canadien
+
+## Angstrom Index
+
+## MacArthur Grassland Mark 5 Index
+
+# Analyse des séries d'indice
+
+## Tail index {.tabset}
+
+### Fosberg Fire Weather Index (FFWI)
+
+### FWI Canadien
+
+### Angstrom Index
+
+### MacArthur Grassland Mark 5 Index
+
+## Auto-corrélation extrêmale {.tabset}
+
+### Fosberg Fire Weather Index (FFWI)
+
+### FWI Canadien
+
+### Angstrom Index
+
+### MacArthur Grassland Mark 5 Index
+
+## Corrélation extrêmale entre les séries
+
+# Analyse par rapport aux données d'entrée {.tabset}
+
+## Fosberg Fire Weather Index (FFWI)
+
+## FWI Canadien
+
+## Angstrom Index
+
+## MacArthur Grassland Mark 5 Index
+# Conclusion
