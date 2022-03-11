@@ -24,3 +24,4 @@ tail_correlation(0.95)
 #faire lanalyse pour différents nvx quantiles : 95%, voir 98% / 99% 
 # !! angstrom valeurs faibles, on prend 5% et on regarde le < mais plus simple : on prend -angstrom comme auto-correl
 
+#pickands dependance function

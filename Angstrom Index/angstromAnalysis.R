@@ -48,14 +48,16 @@ join_index_temperature2$ANGSTROM_INDEX <- join_index_temperature2$ANGSTROM_INDEX
 min_join_index_temperature2 <- min(join_index_temperature2$ANGSTROM_INDEX)
 join_index_temperature2$ANGSTROM_INDEX <- join_index_temperature2$ANGSTROM_INDEX - min_join_index_temperature2 +1
 
-extremal_correlation_input_output <- function(input, quant){
-  u1 = quantile(join_index_temperature2$ANGSTROM_INDEX, quant, na.rm = TRUE)
+extremal_correlation_input_output <- function(input,output, quant){
+  u1 = quantile(output, quant, na.rm = TRUE)
   u2 = quantile(input, quant, na.rm = TRUE)
-  xi.est.quantile = sum(join_index_temperature2$ANGSTROM_INDEX > u1 & input > u2)/sum(join_index_temperature2$ANGSTROM_INDEX > u1)
+  xi.est.quantile = sum(output > u1 & input > u2)/sum(output > u1)
   
   xi.est.quantile
 }
 
 quant = 0.95
-extremal_correlation_input_output(join_index_temperature2$T,quant)
-extremal_correlation_input_output(join_index_temperature2$U,quant)
+extremal_correlation_input_output(join_index_temperature2$T, join_index_temperature2$ANGSTROM_INDEX,quant)
+extremal_correlation_input_output(join_index_temperature$U,join_index_temperature$ANGSTROM_INDEX,quant)
+
+#voir avec des classifications
