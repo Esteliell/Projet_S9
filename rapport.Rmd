@@ -17,6 +17,14 @@ library(dplyr)
 library(ReIns)
 library(extRemes)
 
+# Setup of options for the rmarkdown document
+knitr::opts_chunk$set(echo = TRUE, # By default, codes are shown
+                      warning = FALSE, # Warnings are not printed
+                      message = FALSE, # Messages are not printed
+                      out.width = "90%",
+                      fig.align = 'center') # Codes results are cached into a 
+# dedicated _cache directory which should be ignored by git (and emptied regularly)
+
 ## https://bookdown.org/yihui/rmarkdown/markdown-syntax.html pour des tips
 
 ```
@@ -131,10 +139,15 @@ extremal_correlation_input_output <- function(input,output, quant){
 
 ```` {r angstrom_general_analysis, warning=FALSE}
 
-acf(Angstrom_Index$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21)
+acf(Angstrom_Index$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21, main="Auto-corrélation temporelle de l'indice")
 
-acf(Index_Summer$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21)
+acf(Index_Summer$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21, main ="Auto-corrélation temporelle de l'indice pris sur les périodes estivales")
 
+````
+
+On constate que l'auto-corrélation est plus élevée quand on considère les périodes non-estivales, ce qui n'est pas particulièrement étonnant : il paraît cohérent que les périodes moins chaudes et moins sèches soient moins propices à des valeurs extrêmes de risque d'incendie, et donc une certaine corrélation entre les jours "non-incendie".
+
+````{r}
 seuil_incendie <- 10000 #m2 seuil pour les incendies
 
 date_debut <- as.Date("01/06/2000","%d/%m/%Y")
@@ -173,8 +186,39 @@ ggplot(data = graph_summer_angstrom_index,
 
 ````
 
+On constate que la majorité des gros incendies (> 10000 m²) ont bien lieu lors des périodes où le risque prévu par l'indice Angstrom est est élevé (donc valeur de l'indice faible).
+
 ### Tail index 
+
+```` {r}
+
+moment_data <- na.omit(Angstrom_Index)
+moment_data$ANGSTROM_INDEX <- moment_data$ANGSTROM_INDEX *-1
+min_moment <- min(moment_data$ANGSTROM_INDEX)
+moment_data$ANGSTROM_INDEX <- moment_data$ANGSTROM_INDEX - min_moment +1
+moment_data <- moment_data[moment_data$ANGSTROM_INDEX > 0,]
+M <- Moment(moment_data$ANGSTROM_INDEX, logk = FALSE, plot = TRUE, main = "Moment estimate of the Angstrom Index")
+
+plot(M$k[M$k %in% 25:500], M$gamma[M$k %in% 25:500], main="", xlab="Number of extreme events", ylab="Tail index")
+
+````
+
 ### Auto-corrélation extrêmale
+
+````{r}
+
+
+###
+
+moment_summer <- na.omit(Index_Summer)
+prob = .95 # probability for quantile to be used as threshold
+tmp = atdf(as.ts(moment_summer$ANGSTROM_INDEX), u = prob, plot = FALSE, lag.max = 21, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(tmp, main = "", xlab = "h", ylab = expression(chi(u,h)))
+lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+````
+
 ### Corrélation extrêmale entre les séries
 
 ## MacArthur Grassland Mark 5 Index
