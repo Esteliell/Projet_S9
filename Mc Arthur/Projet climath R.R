@@ -116,13 +116,24 @@ print(ffm.plot)
 ##McArthur_Data$A <- as.Date(McArthur_Data$A, format = '%Y-%m-%d')
 
 McArthur_Data.daily =   McArthur_Data[format(strptime(McArthur_Data$A, "%Y/%m/%d"),)]
-indices = fireIndex(t, vt, u)
-normalize=function(x,low=0,high=1){low+(x-min(x,na.rm=T))*(high-low)/(max(x,na.rm=T)-min(x,na.rm=T))}
-indices = data.frame(sapply(indices,normalize),  Date = strptime(McArthur_Data.daily$A, "%Y/%m/%d"))
-indices = setNames(reshape2::melt(indices,id="Date"),c("Date","Index","Value"))
+indices = data.frame(c(1:10968))
+indices = fireIndex(McArthur_Data$T, McArthur_Data$VT, McArthur_Data$U)
+##normalize=function(x,low=0,high=1){low+(x-min(x,na.rm=T))*(high-low)/(max(x,na.rm=T)-min(x,na.rm=T))}
+##indices = data.frame(sapply(indices,normalize),  Date = strptime(McArthur_Data$A, "%Y/%m/%d"))
+indices$Date <- NULL
+indices$angstrom <- NULL
+indices$hotDryWindy <- NULL
+indices$fuelMoisture <- NULL
+indices$fosberg <- NULL
+indices$chandler <- NULL
+indices$grasslandMk4 <- NULL
+indices$Chandler <- NULL
 
-ggplot(indices,aes(Date,Value,group=Index,color=Index))+geom_smooth(span = .1,  method = "loess", se = F) +theme_classic()+coord_cartesian(expand=F)
+##indices = setNames(reshape2::melt(indices,id="Date"),c("Date","Index","Value"))
 
+indices <- cbind(A,indices)
+##ggplot(indices,aes(Date,Value,group=Index,color=Index))+geom_smooth(span = .1,  method = "loess", se = F) +theme_classic()+coord_cartesian(expand=F)
+plot(indices$A, indices$grasslandMk5) 
 
 data(McArthur_Data)
 daily.precip = McArthur_Data
@@ -132,8 +143,8 @@ daily.precip = setNames(aggregate(daily.precip$RR, by = list(as.character(daily.
 #McArthur_Data.daily = McArthur_Data[format(strptime(McArthur_Data$dateTime, "%m/%d/%Y %H:%M"), "%H:%M") == 
 #                                        "14:35", ]
 #McArthur_Data.daily$DailyPrecip = daily.precip$DailyPrecip
-indices = fireIndexKBDI(temp = McArthur_Data$T, precip = McArthur_Data$RR, 
-                        map = 610, U = McArthur_Data$u, u = McArthur_Data$VT)
+indices = fireIndexKBDI(McArthur_Data$T, McArthur_Data$RR, 
+                        map = 21.3, McArthur_Data$U, McArthur_Data$VT)
 indices = data.frame(sapply(indices,normalize), A = strptime(McArthur_Data$A, 
                                                                 "%Y/%m/%d"))
 indices = setNames(reshape2::melt(indices, id = "Date"), c("Date", "Index", "Value"))
