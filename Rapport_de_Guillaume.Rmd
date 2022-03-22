@@ -1,0 +1,774 @@
+---
+title: "Projet S9"
+author: "Adrien Faissat, Omar Himych, Morgane Roy, Guillaume Schmit"
+date: "03/03/2022"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+    number_sections: yes
+---
+
+```{r setup, include=FALSE}
+library(readr)
+library(ggplot2)
+library(lubridate)
+library(dplyr)
+library(ReIns)
+library(extRemes)
+library(evd)
+library(firebehavioR)
+library(cffdrs)
+
+# Ligne à supprimer
+setwd("D:/Documents/Marseille/Centrale Marseille/3A/Projet Incendi/Projet_S9/")
+
+# Setup of options for the rmarkdown document
+knitr::opts_chunk$set(echo = TRUE, # By default, codes are shown
+                      warning = FALSE, # Warnings are not printed
+                      message = FALSE, # Messages are not printed
+                      out.width = "90%",
+                      fig.align = 'center') # Codes results are cached into a 
+# dedicated _cache directory which should be ignored by git (and emptied regularly)
+
+## https://bookdown.org/yihui/rmarkdown/markdown-syntax.html pour des tips
+
+```
+
+# Introdution
+
+## Intérêt général des indices
+## Types d'indices
+
+# Indices étudiés  {.tabset}
+
+
+## Fosberg Fire Weather Index (FFWI)
+
+## FWI Canadien
+
+## Angstrom Index
+
+## MacArthur Grassland Mark 5 Index
+
+
+# Discussion comparative des formules
+
+## Variables d'entrée
+
+## Statique vs Dynamique
+
+## Échelles temporelles
+
+# Implémentation des calculs {.tabset}
+
+Nous commençons par exploiter les données recueillies par la station de Salon-de-Provence.
+Nous avons également utilisé la base de données en ligne Prométhée afin de recueillir la totalité des incendies ayant eu lieu sur la période étudiée dans le département. Cela nous permettra de confronter les indices avec la réalité.   
+
+```{r data_loading, warning=FALSE, message=FALSE, cache=TRUE}
+
+# Les précipitations
+
+RR_91_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_81-99.csv",delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+RR_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+# Le vent
+
+VT_91_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_VT_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+VT_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_VT_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+# La température 
+
+T_91_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_T_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+T_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_T_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+# L'humidité 
+U_91_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_U_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+U_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_U_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+```
+
+## Fosberg Fire Weather Index (FFWI)
+
+### Concat?nation des donn?es 
+
+```{r}
+
+U_complet<- rbind(U_91_99,U_2000_2021)
+ 
+
+VT_complet<- rbind(VT_91_99,VT_2000_2021)
+
+T_complet<- rbind(T_91_99,T_2000_2021)
+
+RR_complet<- rbind(RR_91_99,RR_2000_2021)
+
+length(RR_complet$RR)
+length(T_complet$T)
+
+```
+
+###  Gestion des valeurs manquants 
+
+```{r}
+
+263232-length(na.omit(T_complet$T))
+
+263232-length(na.omit(VT_complet$VT))
+
+263232-length(na.omit(U_complet$U))
+
+263232-length(na.omit(RR_complet$RR))
+
+```
+
+```{r}
+
+mean(na.omit(RR_complet$RR))
+
+mean(na.omit(T_complet$T))
+
+mean(na.omit(VT_complet$VT))
+
+mean(na.omit(U_complet$U))
+
+
+```
+
+
+```{r}
+
+RR_complet[is.na(RR_complet)]<-0.06693427
+T_complet[is.na(T_complet)]<-14.59049
+VT_complet[is.na(VT_complet)]<-13.60234
+U_complet[is.na(U_complet)]<-67.76571
+
+length(na.omit(RR_complet$RR))
+length(na.omit(T_complet$T))
+length(na.omit(VT_complet$VT)) 
+length(na.omit(U_complet$U))
+
+```
+
+
+### Calcul de FFWI :
+
+#### EMC :
+
+```{r}
+
+EMC <- function(H,t) {
+  
+  
+  if (H < 10 )  {
+    resu <- 0.03229 + 0.281073*H - 0.000578*H*t
+    
+  } 
+  
+  else { 
+    if (H >= 50) {
+    resu <- 21.0606 + 0.005565*H*H - 0.00035*H*t - 0.483199*H
+    
+    } 
+  
+   else {
+    resu <- 2.22749 + 0.160107*H - 0.01478*t
+  } }
+  
+  return(resu)
+}
+
+```
+
+#### Nu :
+
+```{r}
+
+nu <- function(H,t){
+  
+  resu2=1 -2*((EMC(H,t))/30) + 1.5*((EMC(H,t))/30)*((EMC(H,t))/30) + 0.5*((EMC(H,t))/30)*((EMC(H,t))/30)*((EMC(H,t))/30)
+  
+  return(resu2)
+}
+
+
+```
+
+#### FFWI :
+
+```{r}
+
+FFWI<- function(H,t,V){return((nu(H,t)*sqrt(1+V*V))/0.3002)}
+
+FFWI(U_complet$U[length(U_complet)],T_complet$T[length(T_complet)],VT_complet$VT[length(VT_complet)])
+```
+
+
+
+```{r}
+FFwi_values<-cbind(T_complet)
+names(FFwi_values)[names(FFwi_values) == "T"] <- "FFwi"
+ 
+FFwi_values$FFwi[1]<-0
+FFwi_values$FFwi[2]<-0
+
+
+
+#for (i in 1:length(FFwi_values$FFwi))  {
+    
+ #   FFwi_values$FFwi[i]<- FFWI(U_complet$U[i],T_complet$T[i],VT_complet$VT[i])
+ 
+  #}
+
+
+```
+
+
+## FWI Canadien
+
+
+```{r FWI Canadien}
+
+RR_12h <- rbind(RR_91_99[RR_91_99$HEURE == 12,],RR_2000_2021[RR_2000_2021$HEURE == 12,])
+T_12h <- rbind(T_91_99[T_91_99$HEURE == 12,],T_2000_2021[T_2000_2021$HEURE == 12,])
+U_12h <- rbind(U_91_99[U_91_99$HEURE == 12,],U_2000_2021[U_2000_2021$HEURE == 12,])
+VT_12h <- rbind(VT_91_99[VT_91_99$HEURE == 12,],VT_2000_2021[VT_2000_2021$HEURE == 12,])
+
+names(RR_12h)[6] <- "prec"
+names(T_12h)[6] <- "temp"
+names(U_12h)[6] <- "rh"
+names(VT_12h)[6] <- "ws"
+
+donnee_12h <- merge(merge(merge(RR_12h, T_12h), U_12h), VT_12h)
+fwi_resultat_total = fwi(input = na.omit(donnee_12h))
+
+fwi_et_donnees = fwi_resultat_total
+fwi_et_donnees = fwi_et_donnees[c("AN", "MOIS", "JOUR", "HEURE", "FWI", "PREC", "TEMP", "RH", "WS")]
+fwi_resultat = fwi_et_donnees
+fwi_resultat = fwi_resultat[c("AN", "MOIS", "JOUR", "HEURE", "FWI")]
+
+```
+
+## Angstrom Index
+
+```{r angstrom_implementation, cache=TRUE}
+T_13h <- rbind(T_91_99[T_91_99$HEURE == 13,],T_2000_2021[T_2000_2021$HEURE == 13,])
+U_13h <- rbind(U_91_99[U_91_99$HEURE == 13,],U_2000_2021[U_2000_2021$HEURE == 13,])
+  
+Angstrom_Index <- data.frame(matrix(ncol=7,nrow=nrow(T_13h)))
+colnames(Angstrom_Index) <- c("DATE", "AN", "MOIS", "JOUR","ANGSTROM_INDEX", "U", "T")
+
+for(i in 1:nrow(Angstrom_Index))
+{
+  ligne_humidite <- U_13h[i,]
+  ligne_temperature <- T_13h[T_13h$AN == ligne_humidite$AN & T_13h$MOIS == ligne_humidite$MOIS & T_13h$JOUR == ligne_humidite$JOUR,]
+  
+  index <- (ligne_humidite$U / 20) + (27 - ligne_temperature$T)/10
+  
+  Angstrom_Index[i,] <- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"),ligne_humidite$AN, ligne_humidite$MOIS, ligne_humidite$JOUR, index, ligne_humidite$U, ligne_temperature$T)
+
+}
+
+
+nb_iteration = nrow(Angstrom_Index)
+Index_Summer <- data.frame(DATE=numeric(), AN=numeric(), MOIS=numeric(), JOUR=numeric(),ANGSTROM_INDEX=numeric(), U = numeric(), T=numeric(), stringsAsFactors=FALSE)
+
+for (i in 1:nb_iteration){
+  month <- month(as.Date(Angstrom_Index[i,]$DATE, origin="1970-01-01"))
+  if(month == 6 || month == 7 || month == 8){
+      Index_Summer[nrow(Index_Summer)+1,] <- Angstrom_Index[i,]
+  }
+}
+  
+```
+
+## MacArthur Grassland Mark 5 Index
+
+
+
+
+# Analyse des séries d'indice {.tabset}
+
+Nous mettons ici une fonction qui nous aidera pour les corrélations extrêmales entre séries :
+
+````{r}
+extremal_correlation_input_output <- function(input,output, quant){
+  u1 = quantile(output, quant, na.rm = TRUE)
+  u2 = quantile(input, quant, na.rm = TRUE)
+  xi.est.quantile = sum(output > u1 & input > u2)/sum(output > u1)
+  
+  xi.est.quantile
+}
+
+````
+
+
+## Fosberg Fire Weather Index (FFWI)
+
+### Analyse générale :
+
+
+```{r}
+summary(FFwi_values)
+
+year2plot = 2019
+plot(FFwi_values$FFwi[FFwi_values$AN == year2plot], type = "h", xlab='Jours', ylab='FFWI index', main='Evolution temporelle de FFWI entre 1981 ? 2021' )
+
+
+hist(FFwi_values$FFwi, freq=F, col='green', breaks=35, xlab='les valeurs de FFWI', main='La distribution de FFWI')
+lines(density(FFwi_values$FFwi), col='red',lwd=3)
+
+```
+
+
+```{r}
+
+acf(FFwi_values$FFwi, na.action = na.pass, lag.max = 18, main="Auto-corrélation temporelle de l'indice")
+
+acf(FFwi_values$FFwi, na.action = na.pass, lag.max = 100, main="Auto-corrélation temporelle de l'indice")
+
+
+```
+
+### FFWI_13 et les incendies :
+
+
+```{r}
+
+##  r?organise FFWI 13h r?organiser
+
+T_13h <- T_complet[T_complet$HEURE == 13,]
+U_13h <- U_complet[U_complet$HEURE == 13,]
+
+FFWI_Index_13 <<- data.frame(matrix(ncol=2,nrow=10968))
+
+colnames(FFWI_Index_13) <- c("DATE", "FFWI_INDEX")
+
+#View(FFWI_Index_13)
+
+for(i in 1:10968){
+  
+  ligne_humidite <- U_13h[i,]
+
+  FFWI_Index_13[i,] <- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"), FFwi_values$FFwi[i])
+  
+}
+```
+
+```{r}
+
+
+
+T_date<<- data.frame(matrix(ncol=2,nrow=8760))
+
+colnames(T_date) <- c("DATE", "T")
+
+
+#for(i in 254472:263232){
+  
+ # ligne_humidite <-T_complet[i,]
+
+  #T_date[i,] <- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"), T_complet$T[i])
+  
+#}
+```
+
+
+```{r}
+
+
+U_date<<- data.frame(matrix(ncol=2,nrow=8760))
+
+colnames(U_date) <- c("DATE", "U")
+
+
+#for(i in 254472:263232){
+  
+ # ligne_humidite <-U_complet[i,]
+
+  #U_date[i,] <- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"), U_complet$T[i])
+  
+#}
+```
+
+
+```{r}
+
+
+
+VT_date<<- data.frame(matrix(ncol=2,nrow=8760))
+
+colnames(VT_date) <- c("DATE", "VT")
+
+
+#for(i in 254472:263232){
+  
+ # ligne_humidite <- VT_complet[i,]
+
+  #VT_date[i,] <- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"), VT_complet$T[i])
+  
+#}
+```
+
+
+
+
+```{r}
+########
+
+
+Incendie_91_2021 <<- read_delim("data/liste_incendies_91_2021.csv", delim=";", escape_double = FALSE, trim_ws = TRUE)
+
+
+seuil_incendie <- 10000 #m2 seuil pour les incendies
+
+date_debut <- as.Date("01/01/2000","%d/%m/%Y")
+date_fin <- as.Date("22/12/2020","%d/%m/%Y")
+
+nb_iteration = nrow(FFWI_Index_13)
+Index_Summer <<- data.frame(DATE=numeric(), FFWI_Index_13=numeric(), stringsAsFactors=FALSE)
+
+for (i in 1:nb_iteration){
+  
+  month <- month(as.Date(FFWI_Index_13[i,]$DATE, origin="1970-01-01"))
+  if(month == 6 || month == 7 || month == 8){
+    Index_Summer[nrow(Index_Summer)+1,] <- FFWI_Index_13[i,]
+  }
+  
+}
+
+
+########
+
+Incendies_filtered <- Incendie_91_2021[Incendie_91_2021$`Surface parcourue (m2)` >= seuil_incendie,]
+
+
+graph_ffwi <- FFWI_Index_13 %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_T <- T_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_U <- U_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_VT <- VT_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_summer_FFwi_index <- Index_Summer %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+length(graph_ffwi$FFWI_INDEX)
+length(FFWI_Index_13$FFWI_INDEX)
+
+```
+
+
+
+```{r}
+
+### Plotting all dates within chosen range ###
+
+ggplot(data = graph_ffwi,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y =FFWI_INDEX, color = FFWI_INDEX, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="red", high="green") +
+  labs(x = "Date", y = "FFWI Index") +
+  geom_point(data = graph_ffwi %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+### Plotting all summer dates within chosen range ###
+
+ggplot(data = graph_summer_FFwi_index,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = FFWI_Index_13, color = FFWI_Index_13, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="red", high="green") +
+  labs(x = "Date", y = "FFWI Index") +
+  geom_point(data = graph_summer_FFwi_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+```
+
+
+
+### Tail index
+
+```{r}
+
+moment_data <- na.omit(FFwi_values)
+moment_data$FFwi <- moment_data$FFwi *-1
+min_moment <- min(moment_data$FFwi)
+moment_data$FFwi <- moment_data$FFwi - min_moment +1
+moment_data <- moment_data[moment_data$FFwi > 0,]
+
+MFFWI <- Moment(moment_data$FFwi, logk = FALSE, plot = TRUE, main = "Estimation de moment pour FFWI")
+
+plot(MFFWI$k[MFFWI$k %in% 25:500], MFFWI$gamma[MFFWI$k %in% 25:500], main="", xlab="Nombre des evenements extremes ", ylab="Tail index")
+
+```
+
+### Auto-corrélation extrêmale
+
+
+```{r}
+
+###
+
+prob = .95 # la probablit? correspondante au seuil u
+#tmp1 = atdf(as.ts(FFwi_values$FFwi), u = prob, plot = FALSE, lag.max = 40, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+#plot(tmp1, main = "", xlab = "h", ylab = expression(chi(u,h)))
+#lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+```
+
+```{r}
+
+###
+
+moment_summer <- na.omit(Index_Summer)
+
+prob = .95 # probability for quantile to be used as threshold
+#tmp2 = atdf(as.ts(moment_summer$FFWI_INDEX), u = prob, plot = FALSE, lag.max = 21, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+#plot(tmp2, main = "", xlab = "h", ylab = expression(chi(u,h)))
+#lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+```
+
+
+### Corrélation extrêmale entre les séries
+Ici comparaison nentre les indices  Angstrom et FFWI
+
+
+
+
+
+## FWI Canadien
+
+
+### Analyse globale 
+
+```{r}
+
+summary(fwi_resultat$FWI)
+
+plot(fwi_resultat$FWI, main="fwi canadien",type="h", ylab = "FWI Canadien", xlab = "Jours")
+
+```
+
+```{r}
+
+hist(fwi_resultat$FWI, freq=F, col='blue', breaks=35, xlab='les valeurs du FWI Canadien', main='La distribution du FWI Canadien')
+lines(density(fwi_resultat$FWI), col='light green',lwd=3)
+
+```
+
+### Auto-corrélation extrêmale
+### Corrélation extrêmale entre les séries
+
+## Angstrom Index
+
+### Analyse générale
+
+```` {r angstrom_general_analysis, warning=FALSE}
+
+acf(Angstrom_Index$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21, main="Auto-corrélation temporelle de l'indice")
+
+#acf(Index_Summer$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21, main ="Auto-corrélation temporelle de l'indice pris sur les périodes estivales")
+
+````
+
+On constate que l'auto-corrélation est plus élevée quand on considère les périodes non-estivales, ce qui n'est pas particulièrement étonnant : il paraît cohérent que les périodes moins chaudes et moins sèches soient moins propices à des valeurs extrêmes de risque d'incendie, et donc une certaine corrélation entre les jours "non-incendie".
+
+````{r}
+seuil_incendie <- 10000 #m2 seuil pour les incendies
+
+date_debut <- as.Date("01/06/2000","%d/%m/%Y")
+date_fin <- as.Date("22/12/2020","%d/%m/%Y")
+
+########
+
+Incendies_filtered <- Incendie_91_2021[Incendie_91_2021$`Surface parcourue (m2)` >= seuil_incendie,]
+
+
+graph_angstrom_index <- Angstrom_Index %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_summer_angstrom_index <- Index_Summer %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+
+### Plotting all dates within chosen range ###
+
+ggplot(data = graph_angstrom_index,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = ANGSTROM_INDEX, color = ANGSTROM_INDEX, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="red", high="green") +
+  labs(x = "Date", y = "Angstrom Index") +
+  geom_point(data = graph_angstrom_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+### Plotting all summer dates within chosen range ###
+
+#ggplot(data = graph_summer_angstrom_index,
+ #      mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = ANGSTROM_INDEX, color = ANGSTROM_INDEX, xmin = date_debut,xmax=date_fin)) +
+ # geom_point() +
+  #scale_color_gradient(guide="none", low="red", high="green") +
+  #labs(x = "Date", y = "Angstrom Index") +
+  #geom_point(data = graph_summer_angstrom_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+   #          pch=16, size=2, colour="black")
+
+
+````
+
+On constate que la majorité des gros incendies (> 10000 m²) ont bien lieu lors des périodes où le risque prévu par l'indice Angstrom est est élevé (donc valeur de l'indice faible).
+
+### Tail index 
+
+```` {r}
+
+moment_data <- na.omit(Angstrom_Index)
+moment_data$ANGSTROM_INDEX <- moment_data$ANGSTROM_INDEX *-1
+min_moment <- min(moment_data$ANGSTROM_INDEX)
+moment_data$ANGSTROM_INDEX <- moment_data$ANGSTROM_INDEX - min_moment +1
+moment_data <- moment_data[moment_data$ANGSTROM_INDEX > 0,]
+M <- Moment(moment_data$ANGSTROM_INDEX, logk = FALSE, plot = TRUE, main = "Moment estimate of the Angstrom Index")
+
+plot(M$k[M$k %in% 25:500], M$gamma[M$k %in% 25:500], main="", xlab="Number of extreme events", ylab="Tail index")
+
+````
+
+### Auto-corrélation extrêmale
+
+````{r}
+
+
+###
+
+moment_summer <- na.omit(Index_Summer)
+prob = .95 # probability for quantile to be used as threshold
+#tmp = atdf(as.ts(moment_summer$ANGSTROM_INDEX), u = prob, plot = FALSE, lag.max = 21, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+#plot(tmp, main = "", xlab = "h", ylab = expression(chi(u,h)))
+#lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+````
+
+### Corrélation extrêmale entre les séries
+
+#### Estimation empirque de  "tail correlation" xi :
+
+````{r}
+#chiplot(cbind(FFWI_Index_13$FFWI_INDEX,Angstrom_Index$ANGSTROM_INDEX ), qlim = c(0.8, .9995), xlim = c(0.8, .9995), which = 1)
+
+````
+
+## MacArthur Grassland Mark 5 Index
+
+### Tail index 
+### Auto-corrélation extrêmale
+### Corrélation extrêmale entre les séries
+
+
+
+
+# Analyse par rapport aux données d'entrée {.tabset}
+
+## Fosberg Fire Weather Index (FFWI)
+
+
+```{r FFWI_input_temperature}
+### plotting temperatures within chosen range ###
+
+date_debut <- as.Date("01/06/2020","%d/%m/%Y")
+date_fin <- as.Date("31/12/2021","%d/%m/%Y")
+
+#ggplot(data = graph_T,
+ #      mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y =T, color =T, xmin = date_debut,xmax=date_fin)) +
+#  geom_point() +
+ # scale_color_gradient(guide="none", low="green", high="red") +
+  #labs(x = "Date", y = "Temperatures") +
+#  geom_point(data = graph_ffwi %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+#             pch=16, size=2, colour="black")
+
+quant = 0.95
+
+FFWI_Index_omit <- na.omit(FFwi_values)
+
+FFWI_Index_omit_reverse <- FFWI_Index_omit
+FFWI_Index_omit_reverse$FFwi <- FFWI_Index_omit_reverse$FFwi *-1
+
+min_FFWI_Index_omit_reverse <- min(FFWI_Index_omit_reverse$FFwi)
+
+FFWI_Index_omit_reverse$FFwi <- FFWI_Index_omit_reverse$FFwi - min_FFWI_Index_omit_reverse +1
+
+extremal_correlation_input_output(FFWI_Index_omit_reverse$T, FFWI_Index_omit_reverse$FFwi,quant)
+
+```
+
+
+````{r FFWI_input_Humidit?}
+
+### plotting humidty within chosen range ###
+
+#ggplot(data = graph_U,
+ #      mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = U, color = U, xmin = date_debut,xmax=date_fin)) +
+  #geom_point() +
+  #scale_color_gradient(guide="none", low="red", high="green") +
+  #labs(x = "Date", y = "Humidit?") +
+  #geom_point(data = graph_ffwi %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+  #           pch=16, size=2, colour="black")
+
+extremal_correlation_input_output(U_complet$U,FFwi_values$FFwi,quant)
+
+````
+
+
+## FWI Canadien
+
+## Angstrom Index
+
+Nous allons commencer par analyser la sensibilité de cet indice par rapport à la température.
+Afin d'avoir des extrêmes qui correspondent, nous inversons les valeurs de l'indice (étant donné que de base, une valeur faible indique un potentiel plus élevé d'incendie).
+
+```` {r angstrom_input_temperature, warning=FALSE}
+### plotting temperatures within chosen range ###
+
+ggplot(data = graph_angstrom_index,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = T, color = T, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="green", high="red") +
+  labs(x = "Date", y = "Temperatures") +
+  geom_point(data = graph_angstrom_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+quant = 0.95
+
+Angstrom_Index_omit <- na.omit(Angstrom_Index)
+
+Angstrom_Index_omit_reverse <- Angstrom_Index_omit
+Angstrom_Index_omit_reverse$ANGSTROM_INDEX <- Angstrom_Index_omit_reverse$ANGSTROM_INDEX *-1
+min_Angstrom_Index_omit_reverse <- min(Angstrom_Index_omit_reverse$ANGSTROM_INDEX)
+Angstrom_Index_omit_reverse$ANGSTROM_INDEX <- Angstrom_Index_omit_reverse$ANGSTROM_INDEX - min_Angstrom_Index_omit_reverse +1
+
+extremal_correlation_input_output(Angstrom_Index_omit_reverse$T, Angstrom_Index_omit_reverse$ANGSTROM_INDEX,quant)
+
+````
+Pour étudier la sensibilité vis-à-vis de l'humidité, nous n'utilisons pas les valeurs inversées de l'indice car nous voulons vérifier une corrélation inversée : lorsque l'humidité est très élevée, il est cohérent d'attendre un indice indiquant un risque moins élevé d'incendies, et donc une valeur élevée.
+
+````{r angstrom_input_humidity, warning=FALSE}
+### plotting humidty within chosen range ###
+
+ggplot(data = graph_angstrom_index,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = U, color = U, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="red", high="green") +
+  labs(x = "Date", y = "Temperatures") +
+  geom_point(data = graph_angstrom_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+extremal_correlation_input_output(Angstrom_Index_omit$U,Angstrom_Index_omit$ANGSTROM_INDEX,quant)
+
+````
+Nous trouvons une corrélation inversée plus élevée que la corrélation avec la température, ce qui permet de conclure que l'indice Angstrom est légèrement plus sensible à la sécheresse qu'à la température.
+
+## MacArthur Grassland Mark 5 Index
+# Conclusion
