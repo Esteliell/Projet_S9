@@ -399,10 +399,8 @@ plot(indices_McArthur$A, indices_McArthur$grasslandMk5, type ="h")
 La fonction fireIndexKBDI faisant apparaitre une erreur malgré les bons paramètres, nous nous sommes résolus à utiliser la fonction fireIndex qui évidemment envoie un résultat différent car statique... 
 
 
-
-````{r child=here::here("analyses_indices.Rmd")}
-
-````
+```{r, child=c('analyses_indices.Rmd', 'analyses_indices2.Rmd')}
+```
 
 # Analyse par rapport aux données d'entrée {.tabset}
 
