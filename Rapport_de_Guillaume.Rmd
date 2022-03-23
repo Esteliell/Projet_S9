@@ -243,13 +243,21 @@ names(T_12h)[6] <- "temp"
 names(U_12h)[6] <- "rh"
 names(VT_12h)[6] <- "ws"
 
+Diff_date <- as.numeric(difftime(as.Date("1991-10-01"), as.Date("1970-01-01"), units = "days"))
+col_datee <- vector(mode = "logical", nrow(RR_12h))
+for (i in 1:nrow(RR_12h)){
+  col_datee[i] <- Diff_date + i - 1
+}
+A <- as.data.frame(col_datee)
+A <- as.Date(A$col_datee, origin = "1970-01-01")
+
 donnee_12h <- merge(merge(merge(RR_12h, T_12h), U_12h), VT_12h)
-fwi_resultat_total = fwi(input = na.omit(donnee_12h))
+fwi_resultat_total = fwi(input = na.omit(cbind(A, donnee_12h)))
 
 fwi_et_donnees = fwi_resultat_total
-fwi_et_donnees = fwi_et_donnees[c("AN", "MOIS", "JOUR", "HEURE", "FWI", "PREC", "TEMP", "RH", "WS")]
+fwi_et_donnees = fwi_et_donnees[c("A", "AN", "MOIS", "JOUR", "HEURE", "FWI", "PREC", "TEMP", "RH", "WS")]
 fwi_resultat = fwi_et_donnees
-fwi_resultat = fwi_resultat[c("AN", "MOIS", "JOUR", "HEURE", "FWI")]
+fwi_resultat = fwi_resultat[c("A", "AN", "MOIS", "JOUR", "HEURE", "FWI")]
 
 ```
 
@@ -545,8 +553,7 @@ Ici comparaison nentre les indices  Angstrom et FFWI
 
 ## FWI Canadien
 
-
-### Analyse globale 
+### Analyse générale 
 
 ```{r}
 
@@ -627,14 +634,7 @@ for (i in 1:nb_iteration){
 
 Incendies <- Incendie_91_2021[Incendie_91_2021$'Surface parcourue (m2)' >= seuil_incendie,]
 
-
 graph_fwi <- FWI_Index_12 %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-#graph_T <- T_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-#graph_U <- U_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-#graph_VT <- VT_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
 
 graph_ete_Fwi_index <- Index_Ete %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
 
@@ -643,8 +643,78 @@ length(FWI_Index_12$FWI_INDEX)
 
 ```
 
+```{r}
+
+ggplot(data = graph_fwi,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y =FWI_INDEX, color = FWI_INDEX, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="red", high="green") +
+  labs(x = "Date", y = "FWI Index") +
+  geom_point(data = graph_fwi %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+ggplot(data = graph_ete_Fwi_index,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = FWI_Index_12, color = FWI_Index_12, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="red", high="green") +
+  labs(x = "Date", y = "FFWI Index") +
+  geom_point(data = graph_ete_Fwi_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+```
+
+### Tail index
+
+```{r}
+
+moment_data <- na.omit(fwi_resultat)
+moment_data$FWI <- moment_data$FWI *-1
+min_moment <- min(moment_data$FWI)
+moment_data$FWI <- moment_data$FWI - min_moment +1
+moment_data <- moment_data[moment_data$FWI > 0,]
+
+MFWI <- Moment(moment_data$FWI, logk = FALSE, plot = TRUE, main = "Estimation du moment du FWI", col = "red")
+
+plot(MFWI$k[MFWI$k %in% 25:500], MFWI$gamma[MFWI$k %in% 25:500], main="", xlab="Nombre d'événements extrêmes ", ylab="Tail index")
+
+```
 ### Auto-corrélation extrêmale
+
+```{r}
+
+###
+
+prob = .95 # la probablité correspondante au seuil u
+auto_corr_extremale = atdf(as.ts(fwi_resultat$FWI), u = prob, plot = FALSE, lag.max = 40, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(auto_corr_extremale, main = "", xlab = "h", ylab = expression(chi(u,h)))
+lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+```
+
+
+```{r}
+
+moment_ete <- na.omit(Index_Ete)
+
+prob = .95 # la probablité correspondante au seuil u
+auto_corr_extremale_ete = atdf(as.ts(moment_ete$FWI_Index_12), u = prob, plot = FALSE, lag.max = 21, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(auto_corr_extremale_ete, main = "", xlab = "h", ylab = expression(chi(u,h)))
+lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+```
+
 ### Corrélation extrêmale entre les séries
+
+Nous allons comparer ici le MacArthur Grassland Mark 5 Index et le FWI Canadien.
+
+```{r}
+
+comparaison_fwi_Mac_Arthur <- merge(fwi_resultat, indices)
+extremal_correlation_input_output(comparaison_fwi_Mac_Arthur$FWI, comparaison_fwi_Mac_Arthur$grasslandMk5,quant)
+
+```
 
 ## Angstrom Index
 
@@ -803,6 +873,31 @@ extremal_correlation_input_output(U_complet$U,FFwi_values$FFwi,quant)
 
 
 ## FWI Canadien
+
+Nous allons analyser la sensibilité du FWI Canadien par rapport au différente variable d'entrée.
+Nous utilisons une corrélation inverse pour l'humidité et les précipitations, car plus ces paramètres sont, moins il y a de risque d'incendies.
+
+```{r FWI_input_temperature}
+
+quant = 0.95
+
+FWI_Index_omit <- na.omit(fwi_et_donnees)
+min_FWI_Index_omit <- min(FWI_Index_omit$FWI)
+FWI_Index_omit$FWI <- FWI_Index_omit$FWI - min_FWI_Index_omit +1
+
+FWI_Index_omit_reverse <- FWI_Index_omit
+FWI_Index_omit_reverse$FWI <- FWI_Index_omit_reverse$FWI *-1
+min_FWI_Index_omit_reverse <- min(FWI_Index_omit_reverse$FWI)
+FWI_Index_omit_reverse$FWI <- FWI_Index_omit_reverse$FWI - min_FWI_Index_omit_reverse +1
+
+extremal_correlation_input_output(FWI_Index_omit$TEMP, FWI_Index_omit$FWI,quant)
+extremal_correlation_input_output(FWI_Index_omit$PREC, FWI_Index_omit_reverse$FWI,quant)
+extremal_correlation_input_output(FWI_Index_omit$RH, FWI_Index_omit_reverse$FWI,quant)
+extremal_correlation_input_output(FWI_Index_omit$WS, FWI_Index_omit$FWI,quant)
+
+```
+
+Nous constatons que la corrélation la plus élevée correspond à celle avec la vitesse du vent, et que la corrélation avec la température est la plus faible. Ce qui permet de conclure que le FWI Canadien est plus sensible à la vitesse du vent qu'aux autres paramètres, et que le paramètre le moins impactant est la température.
 
 ## Angstrom Index
 
