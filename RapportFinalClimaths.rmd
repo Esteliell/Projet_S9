@@ -16,12 +16,11 @@ output:
 library(readr)
 library(ggplot2)
 library(lubridate)
-#library(dplyr)
+library(dplyr)
 library(ReIns)
 library(extRemes)
 devtools::install_github("EcoFire/firebehavioR")
 library(firebehavioR)
-force=TRUE
 # Setup of options for the rmarkdown document
 knitr::opts_chunk$set(echo = TRUE, # By default, codes are shown
                       warning = FALSE, # Warnings are not printed
@@ -96,22 +95,17 @@ Nous commençons par exploiter les données recueillies par la station de Salon-
 Nous avons également utilisé la base de données en ligne Prométhée afin de recueillir la totalité des incendies ayant eu lieu sur la période étudiée dans le département. Cela nous permettra de confronter les indices avec la réalité.   
 
 ```{r data_loading, warning=FALSE, message=FALSE, cache=TRUE}
-RR_81_99 <- read_delim("C:/Users/adrie/Downloads/Construction_FWI_horaire_METEO_STATION_RR_81-99.csv", 
-                                                                delim = ";", escape_double = FALSE, trim_ws = TRUE)
-RR_2000_2021 <- read_delim("C:/Users/adrie/Downloads/Construction_FWI_horaire_METEO_STATION_RR_2000-2021.csv", 
-                                                                       delim = ";", escape_double = FALSE, trim_ws = TRUE)
-T_81_99 <- read_delim("C:/Users/adrie/Downloads/Construction_FWI_horaire_METEO_STATION_T_81-99.csv", 
-                                                                  delim = ";", escape_double = FALSE, trim_ws = TRUE)
-T_2000_2021 <- read_delim("C:/Users/adrie/Downloads/Construction_FWI_horaire_METEO_STATION_T_2000-2021.csv", 
-                                                                      delim = ";", escape_double = FALSE, trim_ws = TRUE)
-U_81_99 <- read_delim("C:/Users/adrie/Downloads/Construction_FWI_horaire_METEO_STATION_U_81-99.csv", 
-                                                                  delim = ";", escape_double = FALSE, trim_ws = TRUE)
-U_2000_2021 <- read_delim("C:/Users/adrie/Downloads/Construction_FWI_horaire_METEO_STATION_U_2000-2021.csv", 
-                                                                      delim = ";", escape_double = FALSE, trim_ws = TRUE)
-VT_81_99 <- read_delim("C:/Users/adrie/Downloads/Construction_FWI_horaire_METEO_STATION_VT_81-99.csv", 
-                                                                 delim = ";", escape_double = FALSE, trim_ws = TRUE)
-VT_2000_2021 <- read_delim("C:/Users/adrie/Downloads/Construction_FWI_horaire_METEO_STATION_VT_2000-2021.csv", 
-                                                                     delim = ";", escape_double = FALSE, trim_ws = TRUE)
+```{r data_loading, warning=FALSE, message=FALSE, cache=TRUE}
+  RR_81_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_81-99.csv",delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  RR_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  T_81_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_T_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  T_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_T_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  U_81_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_U_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  U_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_U_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  VT_81_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_VT_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  VT_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_VT_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  Incendie_81_2021 <- read_delim("data/liste_incendies_91_2021.csv", delim=";", escape_double = FALSE, trim_ws = TRUE)
+```
 ```
 
 ## Fosberg Fire Weather Index (FFWI)
@@ -327,6 +321,7 @@ Si on se focalise sur les indices en ete, le comportement de ces derniers est tr
 ### Corrélation extrêmale entre les séries
 
 ````{r}
+
 RR_81_99 <- na.omit(RR_81_99)
 T_81_99 <- na.omit(T_81_99)
 U_81_99<- na.omit(U_81_99)

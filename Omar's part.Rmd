@@ -51,18 +51,18 @@ knitr::opts_chunk$set(echo = TRUE, # By default, codes are shown
 
 ## Description des Variables d'entrÃ©e
 
-L'indice feu-météorologique de Fosberg (The Fosberg Fire Weather Index) est un indice pour estimer le danger d'incendie développé par Fosberg (1978). Il est basé sur la teneur en humidité à l'équilibre (Equilibrium Moisture Content) et la vitesse du vent (Wind speed), et nécessite des observations horaires de la température, de l'humidité relative de l'air et de la vitesse du vent comme données d'entrée.
+L'indice feu-m?t?orologique de Fosberg (The Fosberg Fire Weather Index) est un indice pour estimer le danger d'incendie d?velopp? par Fosberg (1978). Il est bas? sur la teneur en humidit? ? l'?quilibre (Equilibrium Moisture Content) et la vitesse du vent (Wind speed), et n?cessite des observations horaires de la temp?rature, de l'humidit? relative de l'air et de la vitesse du vent comme donn?es d'entr?e.
 
-Il a été conçu pour évaluer l'impact des variations météorologiques à petite échelle et à court terme sur le potentiel d'incendie et est très sensible aux changements de l'humidité du combustible fin.
+Il a ?t? con?u pour ?valuer l'impact des variations m?t?orologiques ? petite ?chelle et ? court terme sur le potentiel d'incendie et est tr?s sensible aux changements de l'humidit? du combustible fin.
 
-L'indice FFWI est corrélé avec l'occurrence des incendies dans le nord-est et le sud-ouest des États-Unis par construction.
+L'indice FFWI est corr?l? avec l'occurrence des incendies dans le nord-est et le sud-ouest des ?tats-Unis par construction.
 
 ## Statique vs Dynamique
 
-L'indice FFWI est statique puisque son calcul n'est pas basé sur les valeurs précédentes et aucune initialisation est nécessaire pour faire le calcul. En effet, nous avons besoin seulement de la valeur horaire des :
-H : Humidité de l'aire en pourcentage
+L'indice FFWI est statique puisque son calcul n'est pas bas? sur les valeurs pr?c?dentes et aucune initialisation est n?cessaire pour faire le calcul. En effet, nous avons besoin seulement de la valeur horaire des :
+H : Humidit? de l'aire en pourcentage
 U : la vitesse de vent en mph
-T : la température en °F
+T : la temp?rature en ?F
 En revanche, le calcul se base sur des sous fonctions comme EMC.
 
 ## Ã‰chelles temporelles
@@ -116,11 +116,11 @@ U_2000_2021 <- read_delim("C:/Users/rachid/Desktop/Projet_Option/U 2000-2021.csv
 
 ## Fosberg Fire Weather Index (FFWI) 
 
-### Concaténation des données 
+### Concat?nation des donn?es 
 
-on va tout d'abord combiner les données pour avoir une seul base  donnée de 1981 à 2021
+on va tout d'abord combiner les donn?es pour avoir une seul base  donn?e de 1981 ? 2021
 
-```{r FFwi}
+```{r }
 
 U_complet<- rbind(U_81_99,U_2000_2021)
  
@@ -138,9 +138,9 @@ length(T_complet$T)
 
 ###  Gestion des valeurs manquants 
 
-Cette partie consiste à gérer les valeurs NAN dans notre base données.nous essyons de savoir le nombre exacte des valeurs manquantes dans chaque colonne.
+Cette partie consiste ? g?rer les valeurs NAN dans notre base donn?es.nous essyons de savoir le nombre exacte des valeurs manquantes dans chaque colonne.
 
-```{r FFWI}
+```{r}
 
 263232-length(na.omit(T_complet$T))
 
@@ -152,9 +152,9 @@ Cette partie consiste à gérer les valeurs NAN dans notre base données.nous essyo
 
 ```
 
-Ensuite, nous allons récupérer la moyen de chaque variable météorologique qui sert à remplacer les valeurs NAN
+Ensuite, nous allons r?cup?rer la moyen de chaque variable m?t?orologique qui sert ? remplacer les valeurs NAN
 
-```{r FFWI}
+```{r}
 
 mean(na.omit(RR_complet$RR))
 
@@ -169,7 +169,7 @@ mean(na.omit(U_complet$U))
 
 Alors, on remplace les NAN par la moyen et on remarque que effectivement y plus de valeurs manquantes puisque la longueur est  :
 
-```{r FFWI}
+```{r}
 
 RR_complet[is.na(RR_complet)]<-0.06693427
 T_complet[is.na(T_complet)]<-14.59049
@@ -192,7 +192,7 @@ le calcul des indices se fait par les formules ci dessus :
 
 #### EMC :
 
-```{r FFWI}
+```{r }
 
 EMC <- function(H,t) {
   
@@ -221,7 +221,7 @@ EMC <- function(H,t) {
 
 ![Nu formule.](C:/Users/rachid/Desktop/Projet_Option/Dossier R/Project_S9/Images/Formule3.png)
 
-```{r FFWI}
+```{r }
 
 nu <- function(H,t){
   
@@ -237,16 +237,16 @@ nu <- function(H,t){
 
 ![FFWI formule.](C:/Users/rachid/Desktop/Projet_Option/Dossier R/Project_S9/Images/Formule2.png)
 
-```{r FFWI}
+```{r }
 
 FFWI<- function(H,t,V){return((nu(H,t)*sqrt(1+V*V))/0.3002)}
 
 FFWI(U_complet$U[length(U_complet)],T_complet$T[length(T_complet)],VT_complet$VT[length(VT_complet)])
 ```
-Donc, la dernière valeur de l'indice c'est bien 6.318553.
+Donc, la derni?re valeur de l'indice c'est bien 6.318553.
 
 
-```{r FFWI}
+```{r }
 FFwi_values<-cbind(T_complet)
 names(FFwi_values)[names(FFwi_values) == "T"] <- "FFwi"
  
@@ -324,12 +324,12 @@ extremal_correlation_input_output <- function(input,output, quant){
 ## Fosberg Fire Weather Index (FFWI)
 
 ### Analyse gÃ©nÃ©rale :
-Nous allons effectuer une analyse statistique pour notre série temporelle. La fonction summary permet d'avoir toutes les valeurs importantes : Max, min, moyen, médian, 25% quantile, 75% quantile. Ensuite nous traçons la série sur tout horizon qui montre l'effet de saisonnalité mais apparemment il n'y a pas de tendance. En plus, l'histogramme ci-dessous illustre la distribution de notre indice qui bien asymétrique.  
-```{r FFWI}
+Nous allons effectuer une analyse statistique pour notre s?rie temporelle. La fonction summary permet d'avoir toutes les valeurs importantes : Max, min, moyen, m?dian, 25% quantile, 75% quantile. Ensuite nous tra?ons la s?rie sur tout horizon qui montre l'effet de saisonnalit? mais apparemment il n'y a pas de tendance. En plus, l'histogramme ci-dessous illustre la distribution de notre indice qui bien asym?trique.  
+```{r }
 summary(FFwi_values)
 
 year2plot = 2019
-plot(FFwi_values$FFwi[FFwi_values$AN == year2plot], type = "h", xlab='Jours', ylab='FFWI index', main='Evolution temporelle de FFWI entre 1981 à 2021' )
+plot(FFwi_values$FFwi[FFwi_values$AN == year2plot], type = "h", xlab='Jours', ylab='FFWI index', main='Evolution temporelle de FFWI entre 1981 ? 2021' )
 
 
 hist(FFwi_values$FFwi, freq=F, col='green', breaks=35, xlab='les valeurs de FFWI', main='La distribution de FFWI')
@@ -337,9 +337,9 @@ lines(density(FFwi_values$FFwi), col='red',lwd=3)
 
 ```
 
-Dans cette partie nous utilisons la fonction acf pour calculer les coefficients de autocorrélations. La première figure montre la forte corrélation entre les observations puisque les lages se coupent pas rapidement. La deuxième figure, quand nous avons augmenté le nombre des lages, l'effet de saisonnalité est clair.
+Dans cette partie nous utilisons la fonction acf pour calculer les coefficients de autocorr?lations. La premi?re figure montre la forte corr?lation entre les observations puisque les lages se coupent pas rapidement. La deuxi?me figure, quand nous avons augment? le nombre des lages, l'effet de saisonnalit? est clair.
 
-```{r  FFWI}
+```{r  }
 
 acf(FFwi_values$FFwi, na.action = na.pass, lag.max = 18, main="Auto-corrÃ©lation temporelle de l'indice")
 
@@ -350,10 +350,10 @@ acf(FFwi_values$FFwi, na.action = na.pass, lag.max = 100, main="Auto-corrÃ©latio
 
 ### FFWI_13 et les incendies :
 
-Ici, nous récupérons en gros que les valeurs des indices à 13h pour être compatibles avec Angstrom.
+Ici, nous r?cup?rons en gros que les valeurs des indices ? 13h pour ?tre compatibles avec Angstrom.
 ```{r}
 
-##  réorganise FFWI 13h réorganiser
+##  r?organise FFWI 13h r?organiser
 
 T_13h <- T_complet[T_complet$HEURE == 13,]
 U_13h <- U_complet[U_complet$HEURE == 13,]
@@ -373,7 +373,7 @@ for(i in 1:10968){
 }
 ```
 
-on gère les dates pour chaque variable
+on g?re les dates pour chaque variable
 ```{r}
 
 
@@ -429,7 +429,7 @@ for(i in 254472:263232){
 }
 ```
 
-Cette partie est dédié à superposer les incendies (point noir) qui ont lieu à Avignon avec les valeurs de notre indice. Nous constatons que l'indice ne décrit pas parfaitement ces incendies puisque les points noirs sont distribués sans aucune particularité par rapport à FFWI. Nous pouvons explique ça par le fait que FFWI est compatible avec les régions nord-est et le sud-ouest des États-Unis.
+Cette partie est d?di? ? superposer les incendies (point noir) qui ont lieu ? Avignon avec les valeurs de notre indice. Nous constatons que l'indice ne d?crit pas parfaitement ces incendies puisque les points noirs sont distribu?s sans aucune particularit? par rapport ? FFWI. Nous pouvons explique ?a par le fait que FFWI est compatible avec les r?gions nord-est et le sud-ouest des ?tats-Unis.
 
 ```{r}
 ########
@@ -503,7 +503,7 @@ ggplot(data = graph_summer_FFwi_index,
 
 ```
 
-L'indice ne décrit pas pafaitement les incendies.
+L'indice ne d?crit pas pafaitement les incendies.
 
 ### Tail index
 
@@ -522,20 +522,20 @@ plot(MFFWI$k[MFFWI$k %in% 25:500], MFFWI$gamma[MFFWI$k %in% 25:500], main="", xl
 ```
 
 ### Auto-corrÃ©lation extrÃªmale
-Nous supposons aque des observations non-indépendantes. L'autocorrélation caractérise les probabilités de co-occurrence de valeurs élevée au décalage temporel h.
+Nous supposons aque des observations non-ind?pendantes. L'autocorr?lation caract?rise les probabilit?s de co-occurrence de valeurs ?lev?e au d?calage temporel h.
 
 ```{r}
 
 ###
 
-prob = .95 # la probablité correspondante au seuil u
+prob = .95 # la probablit? correspondante au seuil u
 tmp1 = atdf(as.ts(FFwi_values$FFwi), u = prob, plot = FALSE, lag.max = 40, type = "rho")
 par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
 plot(tmp1, main = "", xlab = "h", ylab = expression(chi(u,h)))
 lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
 
 ```
-Nous pouvons améliorer le résultat en filtrant les données par saison (été) pour compenser  l'effet des saisonnalité.
+Nous pouvons am?liorer le r?sultat en filtrant les donn?es par saison (?t?) pour compenser  l'effet des saisonnalit?.
 
 ```{r}
 
@@ -550,7 +550,7 @@ plot(tmp2, main = "", xlab = "h", ylab = expression(chi(u,h)))
 lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
 
 ```
- Nous constatons que l'effet de saisonalité est disparu.
+ Nous constatons que l'effet de saisonalit? est disparu.
  
 ### Estimer les valeurs  extermales dans FFWI:
 
@@ -601,8 +601,8 @@ par(mfrow=c(2,2))
 
 plot(tmp$year, tmp$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Indice")
 plot(tmpVT$year, tmpVT$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum vent")
-plot(tmpT$year, tmpT$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Température")
-plot(tmpU$year, tmpU$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Humidité")
+plot(tmpT$year, tmpT$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Temp?rature")
+plot(tmpU$year, tmpU$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Humidit?")
 
 
 # fit a stationary model to ffwi:
@@ -614,11 +614,11 @@ plot(fit, type = "qq", main = "")
 
 ```
 
-Nous avons essayé d'extraire les valeurs maximales avec la méthode Block maxima pour notre indice et puis estimer les paramètres de GEV.
+Nous avons essay? d'extraire les valeurs maximales avec la m?thode Block maxima pour notre indice et puis estimer les param?tres de GEV.
 
-Nous constatons que les valeurs maximales de vent sont très cohérentes avec de notre indice. ce qui montre la grande sensibilité du l'indice par le vent.
+Nous constatons que les valeurs maximales de vent sont tr?s coh?rentes avec de notre indice. ce qui montre la grande sensibilit? du l'indice par le vent.
 
-QQ plot montre que notre modèle emprique est compatible avec le modèle  théorique avec un AIC 249.4499.
+QQ plot montre que notre mod?le emprique est compatible avec le mod?le  th?orique avec un AIC 249.4499.
 
 
 ### Analyse extrÃªmale entre les sÃ©ries
@@ -626,7 +626,7 @@ Ici on compare entre les indices  Angstrom et FFWI.
 
 #### Estimation empirque de  "tail correlation" xi :
 
-On constate bien que la tail correlation est reste égale à 0 presque pour tout les valeures de quantile. On peut donc supposer qu'il y a de dépendance asymptotique entre les deux indices.
+On constate bien que la tail correlation est reste ?gale ? 0 presque pour tout les valeures de quantile. On peut donc supposer qu'il y a de d?pendance asymptotique entre les deux indices.
 
 ```{r}
 chiplot(cbind(FFWI_Index_13$FFWI_INDEX,Angstrom_Index$ANGSTROM_INDEX ), qlim = c(0.8, .9), xlim = c(0.8, .9), which = 1)
@@ -775,7 +775,7 @@ extremal_correlation_input_output(FFWI_Index_omit_reverse$T, FFWI_Index_omit_rev
 ```
 
 
-````{r FFWI_input_Humidité}
+````{r FFWI_input_Humidit?}
 
 ### plotting humidty within chosen range ###
 
@@ -783,7 +783,7 @@ ggplot(data = graph_U,
        mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = U, color = U, xmin = date_debut,xmax=date_fin)) +
   geom_point() +
   scale_color_gradient(guide="none", low="red", high="green") +
-  labs(x = "Date", y = "Humidité") +
+  labs(x = "Date", y = "Humidit?") +
   geom_point(data = graph_ffwi %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
              pch=16, size=2, colour="black")
 

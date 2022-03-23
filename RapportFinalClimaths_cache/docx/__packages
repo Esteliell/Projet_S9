@@ -1,5 +1,3 @@
-usethis
-devtools
 readr
 ggplot2
 lubridate
@@ -8,10 +6,4 @@ ReIns
 Lmoments
 distillery
 extRemes
-evd
 firebehavioR
-sp
-rgdal
-raster
-foreach
-cffdrs
