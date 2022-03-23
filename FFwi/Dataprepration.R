@@ -146,6 +146,7 @@ FFWI(U_complet$U[length(U_complet)],T_complet$T[length(T_complet)],VT_complet$VT
 # 5) Analyse statistique 
  
 #print(FFwi_values)
+
 summary(FFwi_values)
 
 year2plot = 2019
