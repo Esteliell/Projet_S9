@@ -1,5 +1,13 @@
 acf(Angstrom_Index, na.action = na.pass)
 
+hist(na.omit(Angstrom_Index$ANGSTROM_INDEX), freq=F, col='green', breaks=35, xlab='Valeurs de Angstrom Index', main='La distribution de Angstrom Index')
+lines(density(na.omit(Angstrom_Index$ANGSTROM_INDEX), col='red',lwd=3))
+      
+      acf(Angstrom_Index$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21, main="Auto-corrélation temporelle de l'indice")
+      acf(Index_Summer_Angstrom$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21, main ="Auto-corrélation temporelle de l'indice pris sur les périodes estivales")
+      
+summary(na.omit(Angstrom_Index$ANGSTROM_INDEX))
+      
 #in date numerics, +1 = +1 day
 
 acf(Angstrom_Index$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21)
@@ -61,3 +69,26 @@ extremal_correlation_input_output(join_index_temperature2$T, join_index_temperat
 extremal_correlation_input_output(join_index_temperature$U,join_index_temperature$ANGSTROM_INDEX,quant)
 
 #voir avec des classifications
+
+extract_function = function(vec, nr_of_na_allowed = 30){
+  if(sum(is.na(vec)) > nr_of_na_allowed){
+    return(NA)
+  }else{
+    return(max(vec, na.rm = TRUE))
+  }
+}
+
+library(evd)
+tmp = aggregate(Angstrom_Index$ANGSTROM_INDEX, by = list(year = Angstrom_Index$AN), FUN = extract_function)
+mean(is.na(tmp$x)) # proportion of years with too many NA data
+# observations of maxima
+obs = tmp$x
+
+ggplot(data = tmp,
+       mapping = aes(x = year, y = x)) + geom_line()  + labs(
+         title    = "Maxima annuel sur les années avec moins de 30 NA",
+         x        = "Year",
+         y        = "Maximum")
+fit = fevd(na.omit(obs), type = "GEV", method = "MLE", period.basis = "year", use.phi = TRUE)
+summary(fit)
+plot(fit, type="density", main="")

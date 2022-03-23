@@ -20,12 +20,14 @@ library(evd)
 devtools::install_github("EcoFire/firebehavioR")
 library(firebehavioR)
 library(cffdrs)
+library(here)
 
 # Setup of options for the rmarkdown document
 knitr::opts_chunk$set(echo = TRUE, # By default, codes are shown
                       warning = FALSE, # Warnings are not printed
                       message = FALSE, # Messages are not printed
                       out.width = "90%",
+                      cache = FALSE,
                       fig.align = 'center') # Codes results are cached into a 
 # dedicated _cache directory which should be ignored by git (and emptied regularly)
 
@@ -35,22 +37,12 @@ knitr::opts_chunk$set(echo = TRUE, # By default, codes are shown
 
 # Introdution
 
-L'étude de situations extrêmes
-
-Objectif du projet :
-Comprendre ce qui peut provoquer les valeurs extrêmes des indices, l’influence des variables météorologiques, faire des analyses statistiques.
-
-
-## Intérêt général des indices
-## Types d'indices
+Les feux de forêt attirent souvent l’attention des médias en tant que des évènements marquants, comme le récent grand feu dans le Var en août 2021, les feux catastrophiques qui ont touchés les États-Unis, la Grèce ou l’Algérie en 2021. En réalité, ces phénomènes ne sont que la face émergée de l’iceberg. En effet, la fréquence de feux de forêts dans le Sud-Est de la France est d'un par semaine, mais sans déclencher de catastrophe grâce à une politique de prévention et de prédiction efficace. L’analyse de l’occurrence de ces feux permet de comprendre et de quantifier les facteurs associés à leur émergence, mais également à leur propagation initiale. 
+Les statistiques modernes, particulièrement la théorie des valeurs extrêmes, permettent d’appréhender la dimension probabiliste de l’activité des feux, ainsi que les différents facteurs associés :  météorologie, climatique, environnemental ou humaine. De plus, on s’attend à ce que le danger d’incendies augmente avec le changement climatique en raison d’une influence renforcée des facteurs de risques météorologiques.
+Ce projet se concentrera sur les facteurs météorologiques. Une variable explicative utile pour représenter le niveau de danger quotidien est l’indice feux-météo (IFM), qui intègre les effets de la température, du vent, des précipitations et de l’humidité de l’air sur le niveau de danger incendie selon le type de l’indice que nous avons choisi, et dans ce projet on se concentre sur quatre IFM :  Angstrom Index, Fosberg Fire Weather Index, The Mark 5 forest fire danger index et Canadian forest fire weather index.
+Nous utiliserons les données météorologiques journalières relevées à la station en région méditerranéenne de Salon-de-Provence pour la période 1981–2020.
 
 # Indices étudiés  {.tabset}
-
-## Fosberg Fire Weather Index (FFWI)
-
-## FWI Canadien
-
-## Angstrom Index
 
 ## MacArthur Grassland Mark 5 Index
 
@@ -65,8 +57,16 @@ Nous verrons la formule mathematique associee dans la prochaine partie.
 
 # Discussion comparative des formules
 
-## Variables d'entrée
+## Variables d'entrée {.tabset}
 
+### Fosberg Fire Weather Index (FFWI)
+
+
+L'indice feu-météo de Fosberg (The Fosberg Fire Weather Index) est un indice pour estimer le danger d'incendie développé par Fosberg (1978). Il est basé sur la teneur en humidité à l'équilibre (Equilibrium Moisture Content) et la vitesse du vent (Wind speed). Il nécessite des observations horaires de la température, de l'humidité relative de l'air et de la vitesse du vent comme données d'entrée.
+
+Il a ?t? con?u pour ?valuer l'impact des variations m?t?orologiques ? petite ?chelle et ? court terme sur le potentiel d'incendie et est tr?s sensible aux changements de l'humidit? du combustible fin.
+
+L'indice FFWI est corr?l? avec l'occurrence des incendies dans le nord-est et le sud-ouest des ?tats-Unis par construction.
 ### MacArthur Grassland Mark 5 Index
 
 L'indice McArthur est basé sur les valeurs quotidiennes de la température, de l'humidité relative, de la vitesse du vent et des précipitations des dernières 24 heures. C'est ce qu'on appelle un indice dynamique puisqu'il depend desconditions meteorologiques des jours precedents.Voici la formule mathematique associee a cet indice :
@@ -93,9 +93,30 @@ Avec Q qui vaut :
 knitr::include_graphics("Q.png")
 ````
 
-## Statique vs Dynamique
 
-## Échelles temporelles
+### Angstrom Index
+
+
+L'Angstrom Index est un indice créé en Suède. Son objectif est simple : être calculable mentalement.
+````{r}
+knitr::include_graphics("formule_angstrom.png")
+````
+T~13~ et H~13~ correspondent respectivement à la température à 13h en °C et à l'humidité à 13h.
+
+## Statique vs Dynamique {.tabset}
+
+### Fosberg Fire Weather Index (FFWI)
+
+L'indice FFWI est statique puisque son calcul n'est pas basé sur les valeurs précédentes et aucune initialisation est nécessaire pour faire le calcul. En effet, nous avons besoin seulement de la valeur horaire des :
+H : Humidité de l'aire en pourcentage
+U : la vitesse de vent en mph
+T : la température en °F
+En revanche, le calcul se base sur des sous-fonctions comme EMC.
+
+### Angstrom Index
+
+Il s'agit également d'un indice statique.
+
 
 # Implémentation des calculs {.tabset}
 
@@ -273,13 +294,21 @@ names(T_12h)[6] <- "temp"
 names(U_12h)[6] <- "rh"
 names(VT_12h)[6] <- "ws"
 
+Diff_date <- as.numeric(difftime(as.Date("1991-10-01"), as.Date("1970-01-01"), units = "days"))
+col_datee <- vector(mode = "logical", nrow(RR_12h))
+for (i in 1:nrow(RR_12h)){
+  col_datee[i] <- Diff_date + i - 1
+}
+A <- as.data.frame(col_datee)
+A <- as.Date(A$col_datee, origin = "1970-01-01")
+
 donnee_12h <- merge(merge(merge(RR_12h, T_12h), U_12h), VT_12h)
-fwi_resultat_total = fwi(input = na.omit(donnee_12h))
+fwi_resultat_total = fwi(input = na.omit(cbind(A, donnee_12h)))
 
 fwi_et_donnees = fwi_resultat_total
-fwi_et_donnees = fwi_et_donnees[c("AN", "MOIS", "JOUR", "HEURE", "FWI", "PREC", "TEMP", "RH", "WS")]
+fwi_et_donnees = fwi_et_donnees[c("A", "AN", "MOIS", "JOUR", "HEURE", "FWI", "PREC", "TEMP", "RH", "WS")]
 fwi_resultat = fwi_et_donnees
-fwi_resultat = fwi_resultat[c("AN", "MOIS", "JOUR", "HEURE", "FWI")]
+fwi_resultat = fwi_resultat[c("A", "AN", "MOIS", "JOUR", "HEURE", "FWI")]
 ````
 
 ## Angstrom Index
@@ -370,598 +399,10 @@ plot(indices_McArthur$A, indices_McArthur$grasslandMk5, type ="h")
 La fonction fireIndexKBDI faisant apparaitre une erreur malgré les bons paramètres, nous nous sommes résolus à utiliser la fonction fireIndex qui évidemment envoie un résultat différent car statique... 
 
 
-# Analyse des séries d'indice {.tabset}
 
-Nous mettons ici une fonction qui nous aidera pour les corrélations extrêmales entre séries :
-
-````{r}
-extremal_correlation_input_output <- function(input,output, quant){
-  u1 = quantile(output, quant, na.rm = TRUE)
-  u2 = quantile(input, quant, na.rm = TRUE)
-  xi.est.quantile = sum(output > u1 & input > u2)/sum(output > u1)
-  
-  xi.est.quantile
-}
+````{r child=here::here("analyses_indices.Rmd")}
 
 ````
-## Fosberg Fire Weather Index (FFWI)
-
-### Analyse générale :
-Nous allons effectuer une analyse statistique pour notre série temporelle. La fonction summary permet d'avoir toutes les valeurs importantes : Max, min, moyen, médiane, 25% quantile, 75% quantile. Ensuite nous traçons la série sur tout horizon qui montre l'effet de saisonnalité, mais apparemment il n'y a pas de tendance. En plus, l'histogramme ci-dessous illustre la distribution de notre indice qui bien asymétrique.  
-```{r }
-summary(FFwi_values)
-
-year2plot = 2019
-plot(FFwi_values$FFwi[FFwi_values$AN == year2plot], type = "h", xlab='Jours', ylab='FFWI index', main='Evolution temporelle de FFWI entre 1981 à 2021' )
-
-
-hist(FFwi_values$FFwi, freq=F, col='green', breaks=35, xlab='les valeurs de FFWI', main='La distribution de FFWI')
-lines(density(FFwi_values$FFwi), col='red',lwd=3)
-
-```
-
-Dans cette partie nous utilisons la fonction acf pour calculer les coefficients d'autocorrélation. La première figure montre la forte corrélation entre les observations puisque les lags ne se coupent pas rapidement. La deuxième figure, quand nous avons augmenté le nombre des lags, l'effet de saisonnalité est clair.
-
-```{r  }
-
-acf(FFwi_values$FFwi, na.action = na.pass, lag.max = 18, main="Auto-corrélation temporelle de l'indice")
-
-acf(FFwi_values$FFwi, na.action = na.pass, lag.max = 100, main="Auto-corrélation temporelle de l'indice")
-
-
-```
-
-### FFWI_13 et les incendies :
-
-Ici, nous récupérons que les valeurs des indices à 13h pour être compatible avec Angstrom.
-```{r}
-
-##  r?organise FFWI 13h r?organiser
-
-T_13h <- T_complet[T_complet$HEURE == 13,]
-U_13h <- U_complet[U_complet$HEURE == 13,]
-
-FFWI_Index_13 <<- data.frame(matrix(ncol=2,nrow=10968))
-
-colnames(FFWI_Index_13) <- c("DATE", "FFWI_INDEX")
-
-#View(FFWI_Index_13)
-
-for(i in 1:10968){
-  
-  ligne_humidite <- U_13h[i,]
-
-  FFWI_Index_13[i,] <- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"), FFwi_values$FFwi[i])
-  
-}
-```
-
-On gère les dates pour chaque variable:
-```{r}
-
-
-
-T_date<<- data.frame(matrix(ncol=2,nrow=8760))
-colnames(T_date) <- c("DATE", "T")
-
-U_date<<- data.frame(matrix(ncol=2,nrow=8760))
-colnames(U_date) <- c("DATE", "U")
-
-VT_date<<- data.frame(matrix(ncol=2,nrow=8760))
-colnames(VT_date) <- c("DATE", "VT")
-
-for(i in 254472:263232){
-  
-  ligne_temperature <-T_complet[i,]
-
-  T_date[i,] <- c(as.Date(gsub(" ", "", paste(ligne_temperature$JOUR,"/",ligne_temperature$MOIS,"/",ligne_temperature$AN)),format="%d/%m/%Y", origin="1970-01-01"), T_complet$T[i])
-  
-  U_date[i,] <- c(as.Date(gsub(" ", "", paste(ligne_temperature$JOUR,"/",ligne_temperature$MOIS,"/",ligne_temperature$AN)),format="%d/%m/%Y", origin="1970-01-01"), U_complet$U[i])
-  
-  VT_date[i,] <- c(as.Date(gsub(" ", "", paste(ligne_temperature$JOUR,"/",ligne_temperature$MOIS,"/",ligne_temperature$AN)),format="%d/%m/%Y", origin="1970-01-01"), VT_complet$V[i])
-  
-}
-```
-
-Cette partie est dédiée à superposer les incendies (points noirs) qui ont lieu dans le département avec les valeurs de notre indice. Nous constatons que l'indice ne décrit pas parfaitement ces incendies puisque les points noirs sont distribués sans aucune particularité par rapport à FFWI. Nous pouvons explique cela par le fait que FFWI est compatible avec les régions nord-est et le sud-ouest des Etats-Unis.
-
-```{r}
-########
-
-seuil_incendie <- 10000 #m2 seuil pour les incendies
-
-date_debut <- as.Date("01/01/2000","%d/%m/%Y")
-date_fin <- as.Date("22/12/2020","%d/%m/%Y")
-
-nb_iteration = nrow(FFWI_Index_13)
-Index_Summer_FFWI <- data.frame(DATE=numeric(), FFWI_Index_13=numeric(), stringsAsFactors=FALSE)
-
-for (i in 1:nb_iteration){
-  
-  month <- month(as.Date(FFWI_Index_13[i,]$DATE, origin="1970-01-01"))
-  if(month == 6 || month == 7 || month == 8){
-    Index_Summer_FFWI[nrow(Index_Summer_FFWI)+1,] <- FFWI_Index_13[i,]
-  }
-  
-}
-
-
-########
-
-Incendies_filtered <- Incendie_81_2021[Incendie_81_2021$`Surface parcourue (m2)` >= seuil_incendie,]
-
-
-graph_ffwi <- FFWI_Index_13 %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-graph_T <- T_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-graph_U <- U_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-graph_VT <- VT_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-graph_summer_FFwi_index <- Index_Summer_FFWI %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-length(graph_ffwi$FFWI_INDEX)
-length(FFWI_Index_13$FFWI_INDEX)
-
-```
-
-
-
-```{r}
-
-### Plotting all dates within chosen range ###
-
-ggplot(data = graph_ffwi,
-       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y =FFWI_INDEX, color = FFWI_INDEX, xmin = date_debut,xmax=date_fin)) +
-  geom_point() +
-  scale_color_gradient(guide="none", low="red", high="green") +
-  labs(x = "Date", y = "FFWI Index") +
-  geom_point(data = graph_ffwi %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
-             pch=16, size=2, colour="black")
-
-### Plotting all summer dates within chosen range ###
-
-ggplot(data = graph_summer_FFwi_index,
-       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = FFWI_Index_13, color = FFWI_Index_13, xmin = date_debut,xmax=date_fin)) +
-  geom_point() +
-  scale_color_gradient(guide="none", low="red", high="green") +
-  labs(x = "Date", y = "FFWI Index") +
-  geom_point(data = graph_summer_FFwi_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
-             pch=16, size=2, colour="black")
-
-```
-
-L'indice ne décrit pas pafaitement les incendies.
-
-### Tail index
-
-```{r}
-
-moment_data <- na.omit(FFwi_values)
-moment_data$FFwi <- moment_data$FFwi *-1
-min_moment <- min(moment_data$FFwi)
-moment_data$FFwi <- moment_data$FFwi - min_moment +1
-moment_data <- moment_data[moment_data$FFwi > 0,]
-
-MFFWI <- Moment(moment_data$FFwi, logk = FALSE, plot = TRUE, main = "Estimation de moment pour FFWI")
-
-plot(MFFWI$k[MFFWI$k %in% 25:500], MFFWI$gamma[MFFWI$k %in% 25:500], main="", xlab="Nombre d'événements extrêmes", ylab="Tail index")
-
-```
-
-### Auto-corrélation extrêmale
-
-Nous supposons que les observations sont non-indépendantes. L'autocorrélation caractérise les probabilités de co-occurrence de valeurs élevées au décalage temporel h.
-
-```{r}
-
-###
-
-prob = .95 # la probablit? correspondante au seuil u
-tmp1 = atdf(as.ts(FFwi_values$FFwi), u = prob, plot = FALSE, lag.max = 40, type = "rho")
-par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
-plot(tmp1, main = "", xlab = "h", ylab = expression(chi(u,h)))
-lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
-
-```
-Nous pouvons améliorer le résultat en filtrant les données par saison (été) pour compenser l'effet de saisonnalité.
-
-```{r}
-
-###
-
-moment_summer <- na.omit(Index_Summer_FFWI)
-
-prob = .95 # probability for quantile to be used as threshold
-tmp2 = atdf(as.ts(moment_summer$FFWI_Index_13), u = prob, plot = FALSE, lag.max = 21, type = "rho")
-par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
-plot(tmp2, main = "", xlab = "h", ylab = expression(chi(u,h)))
-lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
-
-```
- Nous constatons que l'effet de saisonalité a disparu.
- 
-### Estimer les valeurs extrêmales dans FFWI:
-
-```{r}
-
-extract_function = function(vec, nr_of_na_allowed = 60){
-  if(sum(is.na(vec)) > nr_of_na_allowed){
-    return(NA)
-  }else{
-    return(max(vec, na.rm = TRUE))
-  }
-}
-
-# yearly humidity  maxima ####
-
-tmpU = aggregate(U_complet$U, by = list(year = U_complet$AN), FUN = extract_function)
-#view(tmp)
-mean(is.na(tmpU$x)) # proportion of years with too many NA data
-
-obsU = tmpU$x
-
-#yearl temperature maxima ####
-
-tmpT = aggregate(T_complet$T, by = list(year = T_complet$AN), FUN = extract_function)
-#view(tmp)
-mean(is.na(tmpT$x)) # proportion of years with too many NA data
-# observations of maxima
-obsT = tmpT$x
-
-# yearly Wind maxima ####
-
-tmpVT = aggregate(VT_complet$VT, by = list(year = VT_complet$AN), FUN = extract_function)
-#view(tmp)
-mean(is.na(tmpVT$x)) # proportion of years with too many NA data
-# observations of maxima
-obsVT = tmpVT$x
-
-# yearly ffwi maxima ####
-
-tmp = aggregate(FFwi_values$FFwi, by = list(year = FFwi_values$AN), FUN = extract_function)
-#view(tmp)
-mean(is.na(tmp$x)) # proportion of years with too many NA data
-# observations of maxima
-obs = tmp$x
-
-
-par(mfrow=c(2,2))
-
-plot(tmp$year, tmp$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Indice")
-plot(tmpVT$year, tmpVT$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum vent")
-plot(tmpT$year, tmpT$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Température")
-plot(tmpU$year, tmpU$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Humidité")
-
-
-# fit a stationary model to ffwi:
-
-fit = fevd(obs, type = "GEV", method = "MLE", period.basis = "year", use.phi = TRUE)
-summary(fit)
-plot(fit)
-plot(fit, type = "qq", main = "")
-
-```
-
-Nous avons essayé d'extraire les valeurs maximales avec la méthode Block maxima pour notre indice et puis estimer les paramètres de GEV.
-
-Nous constatons que les valeurs maximales de vent sont très cohérentes avec de notre indice, ce qui montre la grande sensibilité de l'indice par rapport au vent.
-
-QQ plot montre que notre modèle emprique est compatible avec le modèle théorique avec un AIC de 249.4499.
-
-
-### Analyse extrêmale entre les séries
-
-Ici on compare les indices Angstrom et FFWI.
-
-#### Estimation empirique de "tail correlation" xi :
-
-On constate bien que la tail correlation est restée égale à 0 presque pour toutes les valeurs de quantile. On peut donc supposer qu'il y a de la dépendance asymptotique entre les deux indices.
-
-```{r}
-chiplot(cbind(FFWI_Index_13$FFWI_INDEX,Angstrom_Index$ANGSTROM_INDEX ), qlim = c(0.8, .9), xlim = c(0.8, .9), which = 1)
-
-```
-## FWI Canadien
-
-
-### Analyse globale 
-
-```{r}
-
-summary(fwi_resultat$FWI)
-
-```
-
-```{r}
-
-plot(fwi_resultat$FWI, main="FWI Canadien de 1991 à 2021",type="h", ylab = "FWI Canadien", xlab = "Jours")
-
-```
-
-```{r}
-
-annee = 2000
-plot(fwi_resultat$FWI[fwi_resultat$AN == annee], type = "h", xlab="Jours", ylab="FWI Canadien", main="FWI Canadien en 2000" )
-
-```
-
-```{r}
-
-hist(fwi_resultat$FWI, freq=F, col='blue', breaks=35, xlab='les valeurs du FWI Canadien', main='La distribution du FWI Canadien')
-lines(density(fwi_resultat$FWI), col='light green',lwd=3)
-
-```
-```{r}
-
-acf(fwi_resultat$FWI, lag.max = 365, main="Auto-corrélation temporelle du FWI Canadien sur un an")
-
-```
-
-Ce tracé permet de remarquer un effet de saisonnalité pour cette indice.
-
-```{r}
-
-acf(fwi_resultat$FWI, lag.max = 20, main="Auto-corrélation temporelle du FWI Canadien à court terme")
-
-```
-
-L'autocorrélation est plutôt faible (inférieure à 0,2 en valeur absolue), mis à part pour les 2 premiers jours.
-Ce constat est également valable sur le long terme. Par conséquent, le FWI Canadien dépend de l'index de la veille, mais ne dépend que très légèrement des index des jours précédents, et n'influera que celui du lendemain.
-
-
-### Comparaison avec les incendies
-
-```{r}
-
-FWI_Index_12 <<- data.frame(matrix(ncol=2,nrow=10968))
-
-colnames(FWI_Index_12) <- c("DATE", "FWI_INDEX")
-
-for(i in 1:10968){
-  
-  ligne_humidite <- U_12h[i,]
-
-  FWI_Index_12[i,] <- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"), fwi_resultat$FWI[i])
-}
-
-seuil_incendie <- 10000 #m2 seuil pour les incendies
-
-date_debut <- as.Date("01/01/2000","%d/%m/%Y")
-date_fin <- as.Date("22/12/2020","%d/%m/%Y")
-
-nb_iteration = nrow(FWI_Index_12)
-Index_Ete<<- data.frame(DATE=numeric(), FWI_Index_12=numeric(), stringsAsFactors=FALSE)
-for (i in 1:nb_iteration){
-  
-  month <- month(as.Date(FWI_Index_12[i,]$DATE, origin="1970-01-01"))
-  if(month == 6 || month == 7 || month == 8){
-    Index_Ete[nrow(Index_Ete)+1,] <- FWI_Index_12[i,]
-  }
-  
-}
-
-
-########
-
-Incendies <- Incendie_81_2021[Incendie_81_2021$'Surface parcourue (m2)' >= seuil_incendie,]
-
-
-graph_fwi <- FWI_Index_12 %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-graph_ete_Fwi_index <- Index_Ete %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-length(graph_fwi$FWI_INDEX)
-length(FWI_Index_12$FWI_INDEX)
-
-```
-
-### Auto-corrélation extrêmale
-### Corrélation extrêmale entre les séries
-
-## Angstrom Index
-
-### Analyse générale
-
-```` {r angstrom_general_analysis, warning=FALSE}
-
-acf(Angstrom_Index$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21, main="Auto-corrélation temporelle de l'indice")
-
-acf(Index_Summer_Angstrom$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21, main ="Auto-corrélation temporelle de l'indice pris sur les périodes estivales")
-
-````
-
-On constate que l'auto-corrélation est plus élevée quand on considère les périodes non-estivales, ce qui n'est pas particulièrement étonnant : il paraît cohérent que les périodes moins chaudes et moins sèches soient moins propices à des valeurs extrêmes de risque d'incendie, et donc une certaine corrélation entre les jours "non-incendie".
-
-````{r}
-seuil_incendie <- 10000 #m2 seuil pour les incendies
-
-date_debut <- as.Date("01/06/2000","%d/%m/%Y")
-date_fin <- as.Date("22/12/2020","%d/%m/%Y")
-
-########
-
-Incendies_filtered <- Incendie_81_2021[Incendie_81_2021$`Surface parcourue (m2)` >= seuil_incendie,]
-
-
-graph_angstrom_index <- Angstrom_Index %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-graph_summer_angstrom_index <- Index_Summer_Angstrom %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
-
-
-### Plotting all dates within chosen range ###
-
-ggplot(data = graph_angstrom_index,
-       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = ANGSTROM_INDEX, color = ANGSTROM_INDEX, xmin = date_debut,xmax=date_fin)) +
-  geom_point() +
-  scale_color_gradient(guide="none", low="red", high="green") +
-  labs(x = "Date", y = "Angstrom Index") +
-  geom_point(data = graph_angstrom_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
-             pch=16, size=2, colour="black")
-
-### Plotting all summer dates within chosen range ###
-
-ggplot(data = graph_summer_angstrom_index,
-       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = ANGSTROM_INDEX, color = ANGSTROM_INDEX, xmin = date_debut,xmax=date_fin)) +
-  geom_point() +
-  scale_color_gradient(guide="none", low="red", high="green") +
-  labs(x = "Date", y = "Angstrom Index") +
-  geom_point(data = graph_summer_angstrom_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
-             pch=16, size=2, colour="black")
-
-
-````
-
-On constate que la majorité des gros incendies (> 10000 m²) ont bien lieu lors des périodes où le risque prévu par l'indice Angstrom est est élevé (donc valeur de l'indice faible).
-
-### Tail index 
-
-```` {r}
-
-moment_data <- na.omit(Angstrom_Index)
-moment_data$ANGSTROM_INDEX <- moment_data$ANGSTROM_INDEX *-1
-min_moment <- min(moment_data$ANGSTROM_INDEX)
-moment_data$ANGSTROM_INDEX <- moment_data$ANGSTROM_INDEX - min_moment +1
-moment_data <- moment_data[moment_data$ANGSTROM_INDEX > 0,]
-M <- Moment(moment_data$ANGSTROM_INDEX, logk = FALSE, plot = TRUE, main = "Moment estimate of the Angstrom Index")
-
-plot(M$k[M$k %in% 25:500], M$gamma[M$k %in% 25:500], main="", xlab="Number of extreme events", ylab="Tail index")
-
-````
-
-### Auto-corrélation extrêmale
-
-````{r}
-
-
-###
-
-moment_summer <- na.omit(Index_Summer_Angstrom)
-prob = .95 # probability for quantile to be used as threshold
-tmp = atdf(as.ts(moment_summer$ANGSTROM_INDEX), u = prob, plot = FALSE, lag.max = 21, type = "rho")
-par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
-plot(tmp, main = "", xlab = "h", ylab = expression(chi(u,h)))
-lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
-
-````
-
-### Corrélation extrêmale entre les séries
-
-## MacArthur Grassland Mark 5 Index
-
-### Analyse générale
-
-````{r}
-
-summary(indices_McArthur)
-
-````
-
-Dans un premier temps, on observe les données brutes liées au vecteur des indices:
-On constate que la valeur de l'indice Mcarthur varie de 0 à 58,4 avec une moyenne à 4,9. De plus 75% des valeurs sont inférieures à 7,65. Enfin, on observe 11 données manqantes dans tout le tableau ce qui est très peu et donc satisfaisant.
-
-
-````{r}
-indices_McArthur <- na.omit(indices_McArthur)
-hist(indices_McArthur$grasslandMk5,xlab = "Weight",col = "red",border = "black")
-
-den <- density(indices_McArthur$grasslandMk5)
-plot(den, frame = FALSE, col = "blue",main = "Density plot")
-````
-
-Ici, on peut observer l'histogramme et la courbe de densité des valeurs d'indice sur 30 ans. On observe un pic très proche de 0 et un maximum local autour de 7. Comme prévu, très peu de valeurs d'indice dépassent 10. 
-
-
-````{r}
-acf(indices_McArthur$grasslandMk5, na.action = na.pass, lag.max = 365)
-acf(indices_McArthur$grasslandMk5, na.action = na.pass, lag.max = 21)
-````
-
-D'abord on trace l'autocorrélation avec un lag.max de 365 car c'est la durée d'une année complète (on observe ainsi l'autocorrélation sur 1 an). 
-Les données sont complètement décorrélées entre elles lorsque l'écart temporelle est d'environ 90 ou 270 jours, soit plus ou moins 1 saison d'écart.
-On a une auto-corrélation négative entre ces deux valeurs, et positive ailleurs. En fait, si autour du  jour j=0, la valeur de l'indice est assez haute alors au jour j+200 (ACF <0) la valeur aura tendance à être plutôt faible. Inversement si ACF >0.
-De plus, on peut voir que le maximum de corrélation en valeur absolue est atteint pour la moitié de l'année et une année complète.
-Tout cela souligne bien une tendance saisonnière.
-Dans un second temps, on trace l'autocorrélation pour un lag_max de 21 pour voir son comportement autour de 0. On remarque que cette dernière est toujours positve dans les jours qui suivent et aux alentours de 0,5. On en déduit que la hauteur de l'indice au jour j=0 sera très probablement équivalente à celle des prochains jours.
-
-
-````{r}
-nb_iteration = nrow(indices_McArthur)
-Index_Summer_McArthur <<- data.frame(DATE=numeric(), indices=numeric(), stringsAsFactors=FALSE)
-for (i in 1:nb_iteration){
-  
-  month <- month(as.Date(indices_McArthur[i,]$A, origin="1970-01-01"))
-  if(month == 6 || month == 7 || month == 8){
-    Index_Summer_McArthur[nrow(Index_Summer_McArthur)+1,] <- indices_McArthur[i,]
-  }
-  
-}
-````
-
-On definit ainsi un tableau ne prenant les valeurs d'indice que pour les mois de juin, juillet et août. 
-
-
-### Tail index 
-
-````{r}
-
-moment_data_McArthur <- na.omit(indices_McArthur)
-moment_data_McArthur <- moment_data_McArthur[moment_data_McArthur$grasslandMk5 > 0,]
-M <- Moment(moment_data_McArthur$grasslandMk5, logk = FALSE, plot = TRUE, main = "Moment estimate of the McArthur Index")
-plot(M$k[M$k %in% 25:500], M$gamma[M$k %in% 25:500], main="", xlab="Number of extreme events", ylab="Tail index")
-
-````
-
-### Auto-corrélation extrêmale
-
-````{r}
-prob = .95 # la probablité correspondante au seuil u
-tmp1 = atdf(as.ts(indices_McArthur$grasslandMk5), u = prob, plot = FALSE, lag.max = 40, type = "rho")
-par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
-plot(tmp1, main = "", xlab = "h", ylab = expression(chi(u,h)))
-lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
-
-tmp2 = atdf(as.ts(indices_McArthur$grasslandMk5), u = prob, plot = FALSE, lag.max = 365, type = "rho")
-par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
-plot(tmp2, main = "", xlab = "h", ylab = expression(chi(u,h)))
-
-prob = .95 # probability for quantile to be used as threshold
-tmp3 = atdf(as.ts(Index_Summer_McArthur$indices), u = prob, plot = FALSE, lag.max = 60, type = "rho")
-par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
-plot(tmp3, main = "", xlab = "h", ylab = expression(chi(u,h)))
-lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
-````
-
-On obtient ici l'autocorrélation des valeurs d'indice qui correspondent aux 5% les plus élevées. Globalement elle est positive mais relativement faible (presque toujours inferieur à 0,2 sauf pour le jour j=0 et j=1). Ainsi, un indice très élevé un jour aura une influence minime sur les indices des prochains jours, même si généralement ces indices garderont une valeur haute. 
-Pour un lag_max de 365, on remarque encore une fois (cf analyse globale) une certaine saisonnalité pour les valeurs extrêmes du McArthur.
-Si on se focalise sur les indices en été, le comportement de ces derniers est très similaire, cela paraît plutôt logique puisque intuitivement, c'est en été que les indices sont les plus hauts. 
-
-### Corrélation extrêmale entre les séries
-
-````{r}
-FWI <- cbind.data.frame(indices_McArthur$A,FFwi_values$FFwi)
-
-x <- cbind.data.frame(indindices_McArthurices$grasslandMk5,FWI$`FFwi_values$FFwi`)
-x <- na.omit(x)
-````
-
-Reste à mesurer la correlation entre l'indice FFwi et le McArthur :
-
-````{r}
-cor(x, method = c("pearson", "kendall", "spearman"))
-
-````
-
-On obtient une correlation de 0,58 entre les deux indices ce qui est assez important!
-
-````{r}
-chiplot(x, qlim = c(0.8, .9), xlim = c(0.8, .9), which = 1)
-````
-
-
-
-## Corrélation extrêmale entre les séries
 
 # Analyse par rapport aux données d'entrée {.tabset}
 
@@ -1017,6 +458,32 @@ extremal_correlation_input_output(U_complet$U,FFwi_values$FFwi,quant)
 
 
 ## FWI Canadien
+
+Nous allons analyser la sensibilité du FWI Canadien par rapport au différente variable d'entrée.
+Nous utilisons une corrélation inverse pour l'humidité et les précipitations, car plus ces paramètres sont, moins il y a de risque d'incendies.
+
+```{r FWI_input_temperature}
+
+quant = 0.95
+
+FWI_Index_omit <- na.omit(fwi_et_donnees)
+min_FWI_Index_omit <- min(FWI_Index_omit$FWI)
+FWI_Index_omit$FWI <- FWI_Index_omit$FWI - min_FWI_Index_omit +1
+
+FWI_Index_omit_reverse <- FWI_Index_omit
+FWI_Index_omit_reverse$FWI <- FWI_Index_omit_reverse$FWI *-1
+min_FWI_Index_omit_reverse <- min(FWI_Index_omit_reverse$FWI)
+FWI_Index_omit_reverse$FWI <- FWI_Index_omit_reverse$FWI - min_FWI_Index_omit_reverse +1
+
+extremal_correlation_input_output(FWI_Index_omit$TEMP, FWI_Index_omit$FWI,quant)
+extremal_correlation_input_output(FWI_Index_omit$PREC, FWI_Index_omit_reverse$FWI,quant)
+extremal_correlation_input_output(FWI_Index_omit$RH, FWI_Index_omit_reverse$FWI,quant)
+extremal_correlation_input_output(FWI_Index_omit$WS, FWI_Index_omit$FWI,quant)
+
+```
+
+Nous constatons que la corrélation la plus élevée correspond à celle avec la vitesse du vent, et que la corrélation avec la température est la plus faible. Ce qui permet de conclure que le FWI Canadien est plus sensible à la vitesse du vent qu'aux autres paramètres, et que le paramètre le moins impactant est la température.
+
 
 ## Angstrom Index
 
@@ -1100,3 +567,6 @@ extremal_correlation_input_output(indices_omit$`McArthur_Data$RR`, indices_omit$
 En comparant les valeurs extremes d'indices avec les variables d'entrée, on s'aperçoit qu'il y'a une forte correlation (0,77) entre un indice élevé et des temperatures élevées. On constate aussi une corrélation un peu moindre (0,38) avec la vitesse du vent (variable qui normalement a une grande influence sur le KBDI). La corrélation est nulle pour les 2 autres variables, cela paraît plutôt incoherent. 
 
 # Conclusion
+
+Finalement, nous arrivons presque atteindre les objectifs fixés en début du projet, en commençant par la compréhension des indices jusqu’à l’estimation des valeurs extrémales dans nos indices. Nous avons appris énormément des concepts en statistique et des compétences en programmation précisément en langage R qui a été au début de projet totalement nouveau pour nous. Effectivement, nous avons rencontré des problèmes durant le projet notamment technique puisque certains indices se caractérisent par une structure complexe. De plus, nous sommes restés bloquer un peu au début puisque le projet est basé sur le cours des valeurs extrêmes que nous venons de suivre récemment.
+En bref, les indices IFM est dépendent fortement de la région, et il faut adapter chacun dans une région compatible par sa construction pour obtenir des résultats pertinents en termes de prédiction des incendies, par exemple nous avons bien décrit les grands incendies dans le départmement par Angstrom mais FFWI n’a pas donné un résultat pertinent. Du surcroît, l’impact d’une variable météorologique est différent dans chaque indice, il ne faut pas croire que toujours la température est le seul facteur responsable : par exemple dans l’indice FFWI, on a trouvé que les maximums sont plutôt synchronisés avec la vitesse de vent.

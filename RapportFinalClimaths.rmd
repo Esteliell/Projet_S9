@@ -95,7 +95,7 @@ Nous commençons par exploiter les données recueillies par la station de Salon-
 Nous avons également utilisé la base de données en ligne Prométhée afin de recueillir la totalité des incendies ayant eu lieu sur la période étudiée dans le département. Cela nous permettra de confronter les indices avec la réalité.   
 
 ```{r data_loading, warning=FALSE, message=FALSE, cache=TRUE}
-```{r data_loading, warning=FALSE, message=FALSE, cache=TRUE}
+
   RR_81_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_81-99.csv",delim = ";", escape_double = FALSE, trim_ws = TRUE)
   RR_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_RR_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
   T_81_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_T_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
@@ -105,7 +105,6 @@ Nous avons également utilisé la base de données en ligne Prométhée afin de 
   VT_81_99 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_VT_81-99.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
   VT_2000_2021 <- read_delim("data/Construction_FWI_horaire_METEO_STATION_VT_2000-2021.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
   Incendie_81_2021 <- read_delim("data/liste_incendies_91_2021.csv", delim=";", escape_double = FALSE, trim_ws = TRUE)
-```
 ```
 
 ## Fosberg Fire Weather Index (FFWI)
@@ -140,6 +139,7 @@ u <- U_15h[,6]
 vt <- VT_15h[,6]
 
 
+  
 McArthur_Data <- cbind.data.frame(A,t,u,vt,rr)
 
 
@@ -352,7 +352,6 @@ length(na.omit(U_complet$U))
 
 EMC <- function(H,t) {
   
-  
   if (H < 10 )  {
     resu <- 0.03229 + 0.281073*H - 0.000578*H*t
     
@@ -388,9 +387,16 @@ names(FFwi_values)[names(FFwi_values) == "T"] <- "FFwi"
 
 FFwi_values$FFwi[1]<-0
 FFwi_values$FFwi[2]<-0
-for (i in 1:length(FFwi_values$FFwi))  {
+
+test <- inner_join(na.omit(FFwi_values),na.omit(T_complet),by=c("AN","MOIS", "JOUR"))
+test <- inner_join(test, na.omit(VT_complet),by=c("AN","MOIS", "JOUR"))
+test <- inner_join(test, na.omit(U_complet),by=c("AN","MOIS", "JOUR"))
+test <- dplyr::select(test, "AN", "MOIS", "JOUR", "VT", "U","T", "FFwi")
+
+
+for (i in 1:length(test$FFwi))  {
   
-  FFwi_values$FFwi[i]<- FFWI(U_complet$U[i],T_complet$T[i],VT_complet$VT[i])
+  FFwi_values$FFwi[i]<- FFWI(test$U[i],test$T[i],test$VT[i])
   
 }
 
