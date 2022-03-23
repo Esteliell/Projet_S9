@@ -710,9 +710,10 @@ lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
 Nous allons comparer ici le MacArthur Grassland Mark 5 Index et le FWI Canadien.
 
 ```{r}
+quant = 0.95
 
 comparaison_fwi_Mac_Arthur <- merge(fwi_resultat, indices)
-extremal_correlation_input_output(comparaison_fwi_Mac_Arthur$FWI, comparaison_fwi_Mac_Arthur$grasslandMk5,quant)
+extremal_correlation_input_output(na.omit(comparaison_fwi_Mac_Arthur$FWI), na.omit(comparaison_fwi_Mac_Arthur$grasslandMk5),quant)
 
 ```
 
