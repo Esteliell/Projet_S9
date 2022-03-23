@@ -552,7 +552,18 @@ Ici comparaison nentre les indices  Angstrom et FFWI
 
 summary(fwi_resultat$FWI)
 
-plot(fwi_resultat$FWI, main="fwi canadien",type="h", ylab = "FWI Canadien", xlab = "Jours")
+```
+
+```{r}
+
+plot(fwi_resultat$FWI, main="FWI Canadien de 1991 à 2021",type="h", ylab = "FWI Canadien", xlab = "Jours")
+
+```
+
+```{r}
+
+annee = 2000
+plot(fwi_resultat$FWI[fwi_resultat$AN == annee], type = "h", xlab="Jours", ylab="FWI Canadien", main="FWI Canadien en 2000" )
 
 ```
 
@@ -560,6 +571,75 @@ plot(fwi_resultat$FWI, main="fwi canadien",type="h", ylab = "FWI Canadien", xlab
 
 hist(fwi_resultat$FWI, freq=F, col='blue', breaks=35, xlab='les valeurs du FWI Canadien', main='La distribution du FWI Canadien')
 lines(density(fwi_resultat$FWI), col='light green',lwd=3)
+
+```
+```{r}
+
+acf(fwi_resultat$FWI, lag.max = 365, main="Auto-corrélation temporelle du FWI Canadien sur un an")
+
+```
+
+Ce tracé permet de remarquer un effet de saisonnalité pour cette indice.
+
+```{r}
+
+acf(fwi_resultat$FWI, lag.max = 20, main="Auto-corrélation temporelle du FWI Canadien à court terme")
+
+```
+
+L'autocorrélation est plutôt faible (inférieure à 0,2 en valeur absolue), mis à part pour les 2 premiers jours.
+Ce constat est également valable sur le long terme. Par conséquent, le FWI Canadien dépend de l'index de la veille, mais ne dépend que très légèrement des index des jours précédents, et n'influera que celui du lendemain.
+
+
+### Comparaison avec les incendies
+
+```{r}
+
+FWI_Index_12 <<- data.frame(matrix(ncol=2,nrow=10968))
+
+colnames(FWI_Index_12) <- c("DATE", "FWI_INDEX")
+
+for(i in 1:10968){
+  
+  ligne_humidite <- U_12h[i,]
+
+  FWI_Index_12[i,] <- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"), fwi_resultat$FWI[i])
+}
+
+seuil_incendie <- 10000 #m2 seuil pour les incendies
+
+date_debut <- as.Date("01/01/2000","%d/%m/%Y")
+date_fin <- as.Date("22/12/2020","%d/%m/%Y")
+
+nb_iteration = nrow(FWI_Index_12)
+Index_Ete<<- data.frame(DATE=numeric(), FWI_Index_12=numeric(), stringsAsFactors=FALSE)
+for (i in 1:nb_iteration){
+  
+  month <- month(as.Date(FWI_Index_12[i,]$DATE, origin="1970-01-01"))
+  if(month == 6 || month == 7 || month == 8){
+    Index_Ete[nrow(Index_Ete)+1,] <- FWI_Index_12[i,]
+  }
+  
+}
+
+
+########
+
+Incendies <- Incendie_91_2021[Incendie_91_2021$'Surface parcourue (m2)' >= seuil_incendie,]
+
+
+graph_fwi <- FWI_Index_12 %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+#graph_T <- T_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+#graph_U <- U_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+#graph_VT <- VT_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_ete_Fwi_index <- Index_Ete %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+length(graph_fwi$FWI_INDEX)
+length(FWI_Index_12$FWI_INDEX)
 
 ```
 
