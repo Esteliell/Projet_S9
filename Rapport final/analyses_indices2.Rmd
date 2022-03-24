@@ -1,0 +1,338 @@
+
+
+## Angstrom Index
+
+### Analyse générale
+
+```` {r angstrom_general_analysis, warning=FALSE}
+
+hist(na.omit(Angstrom_Index$ANGSTROM_INDEX), freq=F, col='green', breaks=50, xlab='Valeurs de Angstrom Index', main='La distribution de Angstrom Index')
+lines(density(na.omit(Angstrom_Index$ANGSTROM_INDEX), col='red',lwd=3))
+
+summary(na.omit(Angstrom_Index$ANGSTROM_INDEX))
+
+acf(Angstrom_Index$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21, main="Auto-corrélation temporelle de l'indice")
+acf(Index_Summer_Angstrom$ANGSTROM_INDEX, na.action = na.pass, lag.max = 21, main ="Auto-corrélation temporelle de l'indice pris sur les périodes estivales")
+
+````
+
+On constate que l'auto-corrélation est plus élevée quand on considère les périodes non-estivales, ce qui n'est pas particulièrement étonnant : il paraît cohérent que les périodes moins chaudes et moins sèches soient moins propices à des valeurs extrêmes de risque d'incendie, et donc une certaine corrélation entre les jours "non-incendie".
+
+````{r}
+seuil_incendie <- 10000 #m2 seuil pour les incendies
+
+date_debut <- as.Date("01/06/2000","%d/%m/%Y")
+date_fin <- as.Date("22/12/2020","%d/%m/%Y")
+
+
+Incendies_filtered <- Incendie_81_2021[Incendie_81_2021$`Surface parcourue (m2)` >= seuil_incendie,]
+
+
+graph_angstrom_index <- Angstrom_Index %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_summer_angstrom_index <- Index_Summer_Angstrom %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+
+### Plotting all dates within chosen range ###
+
+ggplot(data = graph_angstrom_index,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = ANGSTROM_INDEX, color = ANGSTROM_INDEX, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="red", high="green") +
+  labs(x = "Date", y = "Angstrom Index") +
+  geom_point(data = graph_angstrom_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+### Plotting all summer dates within chosen range ###
+
+ggplot(data = graph_summer_angstrom_index,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = ANGSTROM_INDEX, color = ANGSTROM_INDEX, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="red", high="green") +
+  labs(x = "Date", y = "Angstrom Index") +
+  geom_point(data = graph_summer_angstrom_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+
+````
+
+On constate que la majorité des gros incendies (> 10000 m²) ont bien lieu lors des périodes où le risque prévu par l'indice Angstrom est est élevé (donc valeur de l'indice faible).
+
+### Tail index 
+
+```` {r}
+
+moment_data <- na.omit(Angstrom_Index)
+moment_data$ANGSTROM_INDEX <- moment_data$ANGSTROM_INDEX *-1
+min_moment <- min(moment_data$ANGSTROM_INDEX)
+moment_data$ANGSTROM_INDEX <- moment_data$ANGSTROM_INDEX - min_moment +1
+moment_data <- moment_data[moment_data$ANGSTROM_INDEX > 0,]
+M <- Moment(moment_data$ANGSTROM_INDEX, logk = FALSE, plot = TRUE, main = "Moment estimate of the Angstrom Index")
+
+plot(M$k[M$k %in% 25:500], M$gamma[M$k %in% 25:500], main="", xlab="Number of extreme events", ylab="Tail index")
+
+````
+````{r}
+extract_function = function(vec, nr_of_na_allowed = 30){
+  if(sum(is.na(vec)) > nr_of_na_allowed){
+    return(NA)
+  }else{
+    return(max(vec, na.rm = TRUE))
+  }
+}
+
+tmp_angstrom = aggregate(Angstrom_Index$ANGSTROM_INDEX, by = list(year = Angstrom_Index$AN), FUN = extract_function)
+mean(is.na(tmp_angstrom$x)) # proportion of years with too many NA data
+# observations of maxima
+obs_angstrom = tmp_angstrom$x
+
+ggplot(data = tmp_angstrom,
+       mapping = aes(x = year, y = x)) + geom_line()  + labs(
+         title    = "Maxima annuel sur les années avec moins de 30 NA",
+         x        = "Year",
+         y        = "Maximum")
+fit = fevd(na.omit(obs_angstrom), type = "GEV", method = "MLE", period.basis = "year", use.phi = TRUE)
+summary(fit)
+plot(fit, type="density", main="")
+````
+### Auto-corrélation extrêmale
+
+````{r}
+
+
+###
+
+moment_summer <- na.omit(Index_Summer_Angstrom)
+prob = .95 # probability for quantile to be used as threshold
+tmp = atdf(as.ts(moment_summer$ANGSTROM_INDEX), u = prob, plot = FALSE, lag.max = 21, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(tmp, main = "", xlab = "h", ylab = expression(chi(u,h)))
+lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+````
+
+### Corrélation extrêmale entre les séries
+````{r}
+binding <- inner_join(na.omit(Angstrom_Index),na.omit(fwi_resultat),by=c("AN","MOIS", "JOUR"))
+binding <- dplyr::select(binding, "DATE", "AN", "MOIS", "JOUR", "ANGSTROM_INDEX", "FWI")
+
+binding2 <- binding
+binding2$ANGSTROM_INDEX <- binding2$ANGSTROM_INDEX *-1
+min_binding2 <- min(binding2$ANGSTROM_INDEX)
+binding2$ANGSTROM_INDEX <- binding2$ANGSTROM_INDEX - min_binding2 +1
+
+cor(binding2$ANGSTROM_INDEX, binding2$FWI, method = "spearman")
+#pearson et spearman. Pearson = cor classique (sensible ? series tr?s extr?mes /aberrantes), spearman + robuste la-dessus
+
+tail_correlation <- function(quant){
+  u1 = quantile(binding2$ANGSTROM_INDEX, quant)
+  u2 = quantile(binding2$FWI, quant)
+  xi.est.quantile = sum(binding2$ANGSTROM_INDEX > u1 & binding2$FWI > u2)/sum(binding2$ANGSTROM_INDEX > u1)
+  
+  xi.est.quantile
+}
+
+tail_correlation(0.95)
+tail_correlation(0.98)
+tail_correlation(0.99)
+
+M1 = aggregate(binding2$ANGSTROM_INDEX, by = list(year = binding2$AN), FUN = max)$x
+M2 = aggregate(binding2$FWI, by = list(year = binding2$AN), FUN = max)$x
+
+omega = 0:26/26 # define values where to evaluate A
+pickands = abvnonpar(omega, data = cbind(M1,M2), method = "tdo", plot = TRUE) 
+````
+
+## MacArthur Grassland Mark 5 Index
+
+### Analyse générale
+
+````{r}
+
+summary(indices_McArthur)
+
+````
+
+Dans un premier temps, on observe les données brutes liées au vecteur des indices:
+On constate que la valeur de l'indice Mcarthur varie de 0 à 58,4 avec une moyenne à 4,9. De plus 75% des valeurs sont inférieures à 7,65. Enfin, on observe 11 données manqantes dans tout le tableau ce qui est très peu et donc satisfaisant.
+
+
+````{r}
+indices_McArthur <- na.omit(indices_McArthur)
+hist(indices_McArthur$grasslandMk5,xlab = "Weight",col = "red",border = "black")
+
+den <- density(indices_McArthur$grasslandMk5)
+plot(den, frame = FALSE, col = "blue",main = "Density plot")
+````
+
+Ici, on peut observer l'histogramme et la courbe de densité des valeurs d'indice sur 30 ans. On observe un pic très proche de 0 et un maximum local autour de 7. Comme prévu, très peu de valeurs d'indice dépassent 10. 
+
+
+````{r}
+acf(indices_McArthur$grasslandMk5, na.action = na.pass, lag.max = 365)
+acf(indices_McArthur$grasslandMk5, na.action = na.pass, lag.max = 21)
+````
+
+D'abord on trace l'autocorrélation avec un lag.max de 365 car c'est la durée d'une année complète (on observe ainsi l'autocorrélation sur 1 an). 
+Les données sont complètement décorrélées entre elles lorsque l'écart temporelle est d'environ 90 ou 270 jours, soit plus ou moins 1 saison d'écart.
+On a une auto-corrélation négative entre ces deux valeurs, et positive ailleurs. En fait, si autour du  jour j=0, la valeur de l'indice est assez haute alors au jour j+200 (ACF <0) la valeur aura tendance à être plutôt faible. Inversement si ACF >0.
+De plus, on peut voir que le maximum de corrélation en valeur absolue est atteint pour la moitié de l'année et une année complète.
+Tout cela souligne bien une tendance saisonnière.
+Dans un second temps, on trace l'autocorrélation pour un lag_max de 21 pour voir son comportement autour de 0. On remarque que cette dernière est toujours positve dans les jours qui suivent et aux alentours de 0,5. On en déduit que la hauteur de l'indice au jour j=0 sera très probablement équivalente à celle des prochains jours.
+
+
+````{r}
+nb_iteration = nrow(indices_McArthur)
+Index_Summer_McArthur <<- data.frame(DATE=numeric(), indices=numeric(), stringsAsFactors=FALSE)
+for (i in 1:nb_iteration){
+  
+  month <- month(as.Date(indices_McArthur[i,]$A, origin="1970-01-01"))
+  if(month == 6 || month == 7 || month == 8){
+    Index_Summer_McArthur[nrow(Index_Summer_McArthur)+1,] <- indices_McArthur[i,]
+  }
+  
+}
+````
+
+On definit ainsi un tableau ne prenant les valeurs d'indice que pour les mois de juin, juillet et août. 
+
+
+### Tail index 
+
+````{r}
+
+moment_data_McArthur <- na.omit(indices_McArthur)
+moment_data_McArthur <- moment_data_McArthur[moment_data_McArthur$grasslandMk5 > 0,]
+M <- Moment(moment_data_McArthur$grasslandMk5, logk = FALSE, plot = TRUE, main = "Moment estimate of the McArthur Index")
+plot(M$k[M$k %in% 25:500], M$gamma[M$k %in% 25:500], main="", xlab="Number of extreme events", ylab="Tail index")
+
+````
+
+### Auto-corrélation extrêmale
+
+````{r}
+prob = .95 # la probablité correspondante au seuil u
+tmp1 = atdf(as.ts(indices_McArthur$grasslandMk5), u = prob, plot = FALSE, lag.max = 40, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(tmp1, main = "", xlab = "h", ylab = expression(chi(u,h)))
+lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+tmp2 = atdf(as.ts(indices_McArthur$grasslandMk5), u = prob, plot = FALSE, lag.max = 365, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(tmp2, main = "", xlab = "h", ylab = expression(chi(u,h)))
+
+prob = .95 # probability for quantile to be used as threshold
+tmp3 = atdf(as.ts(Index_Summer_McArthur$indices), u = prob, plot = FALSE, lag.max = 60, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(tmp3, main = "", xlab = "h", ylab = expression(chi(u,h)))
+lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+````
+
+On obtient ici l'autocorrélation des valeurs d'indice qui correspondent aux 5% les plus élevées. Globalement elle est positive mais relativement faible (presque toujours inferieur à 0,2 sauf pour le jour j=0 et j=1). Ainsi, un indice très élevé un jour aura une influence minime sur les indices des prochains jours, même si généralement ces indices garderont une valeur haute. 
+Pour un lag_max de 365, on remarque encore une fois (cf analyse globale) une certaine saisonnalité pour les valeurs extrêmes du McArthur.
+Si on se focalise sur les indices en été, le comportement de ces derniers est très similaire, cela paraît plutôt logique puisque intuitivement, c'est en été que les indices sont les plus hauts. 
+
+### Corrélation extrêmale entre les séries
+
+En raison d'un problème technique soudain, nous n'avons pas run le code de cette partie.
+
+````{r eval=FALSE}
+
+RR_81_99 <- na.omit(RR_81_99)
+T_81_99 <- na.omit(T_81_99)
+U_81_99<- na.omit(U_81_99)
+VT_81_99<- na.omit(VT_81_99)
+RR_2000_2021<- na.omit(RR_2000_2021)
+T_2000_2021<- na.omit(T_2000_2021)
+U_2000_2021<- na.omit(U_2000_2021)
+VT_2000_2021<- na.omit(VT_2000_2021)
+
+RR_complet <- rbind(RR_81_99[RR_81_99$HEURE == 15,],RR_2000_2021[RR_2000_2021$HEURE == 15,])
+T_complet <- rbind(T_81_99[T_81_99$HEURE == 15,],T_2000_2021[T_2000_2021$HEURE == 15,])
+U_complet <- rbind(U_81_99[U_81_99$HEURE == 15,],U_2000_2021[U_2000_2021$HEURE == 15,])
+VT_complet <- rbind(VT_81_99[VT_81_99$HEURE == 15,],VT_2000_2021[VT_2000_2021$HEURE == 15,])
+
+263232-length(na.omit(T_complet$T))
+263232-length(na.omit(VT_complet$VT))
+263232-length(na.omit(U_complet$U))
+263232-length(na.omit(RR_complet$RR))
+
+RR_complet[is.na(RR_complet)]<-0.06693427
+T_complet[is.na(T_complet)]<-14.59049
+VT_complet[is.na(VT_complet)]<-13.60234
+U_complet[is.na(U_complet)]<-67.76571
+length(na.omit(RR_complet$RR))
+length(na.omit(T_complet$T))
+length(na.omit(VT_complet$VT)) 
+length(na.omit(U_complet$U))
+
+EMC <- function(H,t) {
+  
+  if (H < 10 )  {
+    resu <- 0.03229 + 0.281073*H - 0.000578*H*t
+    
+  } 
+  
+  else { 
+    if (H >= 50) {
+      resu <- 21.0606 + 0.005565*H*H - 0.00035*H*t - 0.483199*H
+      
+    } 
+    
+    else {
+      resu <- 2.22749 + 0.160107*H - 0.01478*t
+    } }
+  
+  return(resu)
+}
+
+nu <- function(H,t){
+  
+  resu2=1 -2*((EMC(H,t))/30) + 1.5*((EMC(H,t))/30)*((EMC(H,t))/30) + 0.5*((EMC(H,t))/30)*((EMC(H,t))/30)*((EMC(H,t))/30)
+  
+  return(resu2)
+}
+
+FFWI<- function(H,t,V){return((nu(H,t)*sqrt(1+V*V))/0.3002)}
+FFWI(U_complet$U[length(U_complet)],T_complet$T[length(T_complet)],VT_complet$VT[length(VT_complet)])
+
+
+
+FFwi_values<-cbind(T_complet)
+names(FFwi_values)[names(FFwi_values) == "T"] <- "FFwi"
+
+FFwi_values$FFwi[1]<-0
+FFwi_values$FFwi[2]<-0
+
+test <- inner_join(na.omit(FFwi_values),na.omit(T_complet),by=c("AN","MOIS", "JOUR"))
+test <- inner_join(test, na.omit(VT_complet),by=c("AN","MOIS", "JOUR"))
+test <- inner_join(test, na.omit(U_complet),by=c("AN","MOIS", "JOUR"))
+test <- dplyr::select(test, "AN", "MOIS", "JOUR", "VT", "U","T", "FFwi")
+
+
+for (i in 1:length(test$FFwi))  {
+  
+  FFwi_values$FFwi[i]<- FFWI(test$U[i],test$T[i],test$VT[i])
+  
+}
+
+
+FWI <- cbind.data.frame(na.omit(indices$A),na.omit(FFwi_values$FFwi))
+
+x <- cbind.data.frame(indices$grasslandMk5,FWI$`FFwi_values$FFwi`)
+x <- na.omit(x)
+````
+
+Reste à mesurer la correlation entre l'indice FFwi et le McArthur :
+
+````{r eval=FALSE}
+cor(x, method = c("pearson", "kendall", "spearman"))
+
+````
+
+On obtient une correlation de 0,58 entre les deux indices ce qui est assez important!
+
+````{r eval=FALSE}
+chiplot(x, qlim = c(0.8, .9), xlim = c(0.8, .9), which = 1)
+````
+

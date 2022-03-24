@@ -125,9 +125,9 @@ cor(binding2$ANGSTROM_INDEX, binding2$FWI, method = "spearman")
 #pearson et spearman. Pearson = cor classique (sensible ? series tr?s extr?mes /aberrantes), spearman + robuste la-dessus
 
 tail_correlation <- function(quant){
-  u1 = quantile(test2$ANGSTROM_INDEX, quant)
-  u2 = quantile(test2$FWI, quant)
-  xi.est.quantile = sum(test2$ANGSTROM_INDEX > u1 & test2$FWI > u2)/sum(test2$ANGSTROM_INDEX > u1)
+  u1 = quantile(binding2$ANGSTROM_INDEX, quant)
+  u2 = quantile(binding2$FWI, quant)
+  xi.est.quantile = sum(binding2$ANGSTROM_INDEX > u1 & binding2$FWI > u2)/sum(binding2$ANGSTROM_INDEX > u1)
   
   xi.est.quantile
 }

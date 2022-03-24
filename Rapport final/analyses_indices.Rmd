@@ -1,0 +1,420 @@
+# Analyse des séries d'indice {.tabset}
+
+Nous mettons ici une fonction qui nous aidera pour les corrélations extrêmales entre séries :
+
+````{r}
+
+extremal_correlation_input_output <- function(input,output, quant){
+  u1 = quantile(output, quant, na.rm = TRUE)
+  u2 = quantile(input, quant, na.rm = TRUE)
+  xi.est.quantile = sum(output > u1 & input > u2)/sum(output > u1)
+  
+  xi.est.quantile
+}
+
+````
+## Fosberg Fire Weather Index (FFWI)
+
+### Analyse générale
+Nous allons effectuer une analyse statistique pour notre série temporelle. La fonction summary permet d'avoir toutes les valeurs importantes : Max, min, moyen, médiane, 25% quantile, 75% quantile. Ensuite nous traçons la série sur tout horizon qui montre l'effet de saisonnalité, mais apparemment il n'y a pas de tendance. En plus, l'histogramme ci-dessous illustre la distribution de notre indice qui bien asymétrique.  
+```{r }
+summary(FFwi_values)
+
+year2plot = 2019
+plot(FFwi_values$FFwi[FFwi_values$AN == year2plot], type = "h", xlab='Jours', ylab='FFWI index', main='Evolution temporelle de FFWI entre 1981 à 2021' )
+
+
+hist(FFwi_values$FFwi, freq=F, col='green', breaks=35, xlab='les valeurs de FFWI', main='La distribution de FFWI')
+lines(density(FFwi_values$FFwi), col='red',lwd=3)
+
+```
+
+Dans cette partie nous utilisons la fonction acf pour calculer les coefficients d'autocorrélation. La première figure montre la forte corrélation entre les observations puisque les lags ne se coupent pas rapidement. La deuxième figure, quand nous avons augmenté le nombre des lags, l'effet de saisonnalité est clair.
+
+```{r  }
+
+acf(FFwi_values$FFwi, na.action = na.pass, lag.max = 18, main="Auto-corrélation temporelle de l'indice")
+
+acf(FFwi_values$FFwi, na.action = na.pass, lag.max = 100, main="Auto-corrélation temporelle de l'indice")
+
+
+```
+
+### FFWI_13 et les incendies
+
+Ici, nous récupérons que les valeurs des indices à 13h pour être compatible avec Angstrom.
+```{r}
+
+##  r?organise FFWI 13h r?organiser
+
+T_13h <- T_complet[T_complet$HEURE == 13,]
+U_13h <- U_complet[U_complet$HEURE == 13,]
+
+FFWI_Index_13 <<- data.frame(matrix(ncol=2,nrow=10968))
+
+colnames(FFWI_Index_13) <- c("DATE", "FFWI_INDEX")
+
+#View(FFWI_Index_13)
+
+for(i in 1:10968){
+  
+  ligne_humidite <- U_13h[i,]
+
+  FFWI_Index_13[i,] <- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"), FFwi_values$FFwi[i])
+  
+}
+```
+
+On gère les dates pour chaque variable:
+```{r}
+
+
+
+T_date<<- data.frame(matrix(ncol=2,nrow=8760))
+colnames(T_date) <- c("DATE", "T")
+
+U_date<<- data.frame(matrix(ncol=2,nrow=8760))
+colnames(U_date) <- c("DATE", "U")
+
+VT_date<<- data.frame(matrix(ncol=2,nrow=8760))
+colnames(VT_date) <- c("DATE", "VT")
+
+for(i in 254472:263232){
+  
+  ligne_temperature <-T_complet[i,]
+
+  T_date[i,] <- c(as.Date(gsub(" ", "", paste(ligne_temperature$JOUR,"/",ligne_temperature$MOIS,"/",ligne_temperature$AN)),format="%d/%m/%Y", origin="1970-01-01"), T_complet$T[i])
+  
+  U_date[i,] <- c(as.Date(gsub(" ", "", paste(ligne_temperature$JOUR,"/",ligne_temperature$MOIS,"/",ligne_temperature$AN)),format="%d/%m/%Y", origin="1970-01-01"), U_complet$U[i])
+  
+  VT_date[i,] <- c(as.Date(gsub(" ", "", paste(ligne_temperature$JOUR,"/",ligne_temperature$MOIS,"/",ligne_temperature$AN)),format="%d/%m/%Y", origin="1970-01-01"), VT_complet$VT[i])
+  
+}
+```
+
+Cette partie est dédiée à superposer les incendies (points noirs) qui ont lieu dans le département avec les valeurs de notre indice. Nous constatons que l'indice ne décrit pas parfaitement ces incendies puisque les points noirs sont distribués sans aucune particularité par rapport à FFWI. Nous pouvons explique cela par le fait que FFWI est compatible avec les régions nord-est et le sud-ouest des Etats-Unis.
+
+```{r}
+
+seuil_incendie <- 10000 #m2 seuil pour les incendies
+
+date_debut <- as.Date("01/01/2000","%d/%m/%Y")
+date_fin <- as.Date("22/12/2020","%d/%m/%Y")
+
+nb_iteration = nrow(FFWI_Index_13)
+Index_Summer_FFWI <- data.frame(DATE=numeric(), FFWI_Index_13=numeric(), stringsAsFactors=FALSE)
+
+for (i in 1:nb_iteration){
+  
+  month <- month(as.Date(FFWI_Index_13[i,]$DATE, origin="1970-01-01"))
+  if(month == 6 || month == 7 || month == 8){
+    Index_Summer_FFWI[nrow(Index_Summer_FFWI)+1,] <- FFWI_Index_13[i,]
+  }
+  
+}
+
+
+Incendies_filtered <- Incendie_81_2021[Incendie_81_2021$`Surface parcourue (m2)` >= seuil_incendie,]
+
+
+graph_ffwi <- FFWI_Index_13 %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_T <- T_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_U <- U_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_VT <- VT_date %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_summer_FFwi_index <- Index_Summer_FFWI %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+length(graph_ffwi$FFWI_INDEX)
+length(FFWI_Index_13$FFWI_INDEX)
+
+```
+
+
+
+```{r}
+
+### Plotting all dates within chosen range ###
+
+ggplot(data = graph_ffwi,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y =FFWI_INDEX, color = FFWI_INDEX, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="red", high="green") +
+  labs(x = "Date", y = "FFWI Index") +
+  geom_point(data = graph_ffwi %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+### Plotting all summer dates within chosen range ###
+
+ggplot(data = graph_summer_FFwi_index,
+       mapping = aes(x = as.Date(DATE, origin="1970-01-01"), y = FFWI_Index_13, color = FFWI_Index_13, xmin = date_debut,xmax=date_fin)) +
+  geom_point() +
+  scale_color_gradient(guide="none", low="red", high="green") +
+  labs(x = "Date", y = "FFWI Index") +
+  geom_point(data = graph_summer_FFwi_index %>% filter(as.Date(DATE, origin="1970-01-01") %in% as.Date.character(Incendies_filtered$Alerte,format="%d/%m/%Y %H:%M", origin="1970-01-01")),
+             pch=16, size=2, colour="black")
+
+```
+
+L'indice ne décrit pas pafaitement les incendies.
+
+#### Tail index
+
+```{r}
+
+moment_data <- na.omit(FFwi_values)
+moment_data$FFwi <- moment_data$FFwi *-1
+min_moment <- min(moment_data$FFwi)
+moment_data$FFwi <- moment_data$FFwi - min_moment +1
+moment_data <- moment_data[moment_data$FFwi > 0,]
+
+MFFWI <- Moment(moment_data$FFwi, logk = FALSE, plot = TRUE, main = "Estimation de moment pour FFWI")
+
+plot(MFFWI$k[MFFWI$k %in% 25:500], MFFWI$gamma[MFFWI$k %in% 25:500], main="", xlab="Nombre d'événements extrêmes", ylab="Tail index")
+
+```
+
+#### Auto-corrélation extrêmale
+
+Nous supposons que les observations sont non-indépendantes. L'autocorrélation caractérise les probabilités de co-occurrence de valeurs élevées au décalage temporel h.
+
+```{r}
+
+###
+
+prob = .95 # la probablit? correspondante au seuil u
+tmp1 = atdf(as.ts(FFwi_values$FFwi), u = prob, plot = FALSE, lag.max = 40, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(tmp1, main = "", xlab = "h", ylab = expression(chi(u,h)))
+lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+```
+Nous pouvons améliorer le résultat en filtrant les données par saison (été) pour compenser l'effet de saisonnalité.
+
+```{r}
+
+###
+
+moment_summer <- na.omit(Index_Summer_FFWI)
+
+prob = .95 # probability for quantile to be used as threshold
+tmp2 = atdf(as.ts(moment_summer$FFWI_Index_13), u = prob, plot = FALSE, lag.max = 21, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(tmp2, main = "", xlab = "h", ylab = expression(chi(u,h)))
+lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+```
+ Nous constatons que l'effet de saisonalité a disparu.
+ 
+#### Estimer les valeurs extrêmales dans FFWI:
+
+```{r}
+
+extract_function = function(vec, nr_of_na_allowed = 60){
+  if(sum(is.na(vec)) > nr_of_na_allowed){
+    return(NA)
+  }else{
+    return(max(vec, na.rm = TRUE))
+  }
+}
+
+# yearly humidity  maxima ####
+
+tmpU = aggregate(U_complet$U, by = list(year = U_complet$AN), FUN = extract_function)
+#view(tmp)
+mean(is.na(tmpU$x)) # proportion of years with too many NA data
+
+obsU = tmpU$x
+
+#yearl temperature maxima ####
+
+tmpT = aggregate(T_complet$T, by = list(year = T_complet$AN), FUN = extract_function)
+#view(tmp)
+mean(is.na(tmpT$x)) # proportion of years with too many NA data
+# observations of maxima
+obsT = tmpT$x
+
+# yearly Wind maxima ####
+
+tmpVT = aggregate(VT_complet$VT, by = list(year = VT_complet$AN), FUN = extract_function)
+#view(tmp)
+mean(is.na(tmpVT$x)) # proportion of years with too many NA data
+# observations of maxima
+obsVT = tmpVT$x
+
+# yearly ffwi maxima ####
+
+tmp = aggregate(FFwi_values$FFwi, by = list(year = FFwi_values$AN), FUN = extract_function)
+#view(tmp)
+mean(is.na(tmp$x)) # proportion of years with too many NA data
+# observations of maxima
+obs = tmp$x
+
+
+par(mfrow=c(2,2))
+
+plot(tmp$year, tmp$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Indice")
+plot(tmpVT$year, tmpVT$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum vent")
+plot(tmpT$year, tmpT$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Température")
+plot(tmpU$year, tmpU$x, type = "b", pch = 19, xlab = "Year", ylab = "Maximum Humidité")
+
+
+# fit a stationary model to ffwi:
+
+fit = fevd(obs, type = "GEV", method = "MLE", period.basis = "year", use.phi = TRUE)
+summary(fit)
+plot(fit)
+plot(fit, type = "qq", main = "")
+
+```
+
+Nous avons essayé d'extraire les valeurs maximales avec la méthode Block maxima pour notre indice et puis estimer les paramètres de GEV.
+
+Nous constatons que les valeurs maximales de vent sont très cohérentes avec de notre indice, ce qui montre la grande sensibilité de l'indice par rapport au vent.
+
+QQ plot montre que notre modèle emprique est compatible avec le modèle théorique avec un AIC de 249.4499.
+
+
+#### Analyse extrêmale entre les séries
+
+Ici on compare les indices Angstrom et FFWI avec une estimation empirique de "tail correlation" xi :
+
+On constate bien que la tail correlation est restée égale à 0 presque pour toutes les valeurs de quantile. On peut donc supposer qu'il y a de la dépendance asymptotique entre les deux indices.
+
+```{r}
+chiplot(cbind(FFWI_Index_13$FFWI_INDEX,Angstrom_Index$ANGSTROM_INDEX ), qlim = c(0.8, .9), xlim = c(0.8, .9), which = 1)
+
+```
+## FWI Canadien
+
+
+### Analyse globale 
+
+```{r}
+
+summary(fwi_resultat$FWI)
+
+```
+
+```{r}
+
+plot(fwi_resultat$FWI, main="FWI Canadien de 1981 à 2021",type="h", ylab = "FWI Canadien", xlab = "Jours")
+
+```
+
+```{r}
+
+annee = 2000
+plot(fwi_resultat$FWI[fwi_resultat$AN == annee], type = "h", xlab="Jours", ylab="FWI Canadien", main="FWI Canadien en 2000" )
+
+```
+
+```{r}
+
+hist(fwi_resultat$FWI, freq=F, col='blue', breaks=35, xlab='les valeurs du FWI Canadien', main='La distribution du FWI Canadien')
+lines(density(fwi_resultat$FWI), col='light green',lwd=3)
+
+```
+```{r}
+
+acf(fwi_resultat$FWI, lag.max = 365, main="Auto-corrélation temporelle du FWI Canadien sur un an")
+
+```
+
+Ce tracé permet de remarquer un effet de saisonnalité pour cette indice.
+
+```{r}
+
+acf(fwi_resultat$FWI, lag.max = 20, main="Auto-corrélation temporelle du FWI Canadien à court terme")
+
+```
+
+L'autocorrélation est plutôt faible (inférieure à 0,2 en valeur absolue), mis à part pour les 2 premiers jours.
+Ce constat est également valable sur le long terme. Par conséquent, le FWI Canadien dépend de l'index de la veille, mais ne dépend que très légèrement des index des jours précédents, et n'influera que celui du lendemain.
+
+
+### Comparaison avec les incendies
+
+```{r}
+
+FWI_Index_12 <<- data.frame(matrix(ncol=2,nrow=10968))
+
+colnames(FWI_Index_12) <- c("DATE", "FWI_INDEX")
+
+for(i in 1:10968){
+  
+  ligne_humidite <- U_12h[i,]
+
+  FWI_Index_12[i,] <- c(as.Date(gsub(" ", "", paste(ligne_humidite$JOUR,"/",ligne_humidite$MOIS,"/",ligne_humidite$AN)),format="%d/%m/%Y", origin="1970-01-01"), fwi_resultat$FWI[i])
+}
+
+seuil_incendie <- 10000 #m2 seuil pour les incendies
+
+date_debut <- as.Date("01/01/2000","%d/%m/%Y")
+date_fin <- as.Date("22/12/2020","%d/%m/%Y")
+
+nb_iteration = nrow(FWI_Index_12)
+Index_Ete<<- data.frame(DATE=numeric(), FWI_Index_12=numeric(), stringsAsFactors=FALSE)
+for (i in 1:nb_iteration){
+  
+  month <- month(as.Date(FWI_Index_12[i,]$DATE, origin="1970-01-01"))
+  if(month == 6 || month == 7 || month == 8){
+    Index_Ete[nrow(Index_Ete)+1,] <- FWI_Index_12[i,]
+  }
+  
+}
+
+
+########
+
+Incendies <- Incendie_81_2021[Incendie_81_2021$'Surface parcourue (m2)' >= seuil_incendie,]
+
+
+graph_fwi <- FWI_Index_12 %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+graph_ete_Fwi_index <- Index_Ete %>% filter(between(as.Date(DATE,origin="1970-01-01"), date_debut,date_fin))
+
+length(graph_fwi$FWI_INDEX)
+length(FWI_Index_12$FWI_INDEX)
+
+```
+
+### Auto-corrélation extrêmale
+
+```{r}
+
+
+prob = .95 # la probablité correspondante au seuil u
+auto_corr_extremale = atdf(as.ts(fwi_resultat$FWI), u = prob, plot = FALSE, lag.max = 40, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(auto_corr_extremale, main = "", xlab = "h", ylab = expression(chi(u,h)))
+lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+```
+
+
+```{r}
+
+moment_ete <- na.omit(Index_Ete)
+
+prob = .95 # la probablité correspondante au seuil u
+auto_corr_extremale_ete = atdf(as.ts(moment_ete$FWI_Index_12), u = prob, plot = FALSE, lag.max = 21, type = "rho")
+par(mar = c(5, 5, .5, .5), cex.lab = 2, cex.axis = 2, lwd = 2, cex = 1)
+plot(auto_corr_extremale_ete, main = "", xlab = "h", ylab = expression(chi(u,h)))
+lines(c(0, 100), rep(1-prob,2), lwd = 2, lty = 2, col = "red")
+
+```
+
+### Corrélation extrêmale entre les séries
+
+Nous allons comparer ici le MacArthur Grassland Mark 5 Index et le FWI Canadien.
+
+```{r}
+quant = 0.95
+
+comparaison_fwi_Mac_Arthur <- merge(fwi_resultat, indices_McArthur)
+extremal_correlation_input_output(na.omit(comparaison_fwi_Mac_Arthur$FWI), na.omit(comparaison_fwi_Mac_Arthur$grasslandMk5),quant)
+
+```
